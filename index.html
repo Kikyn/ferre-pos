@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FERRE-POS | Cotizaciones y Ventas</title>
-    <!-- Librerías de Firebase de la Nube -->
+    <!-- Librerías de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -34,7 +34,6 @@
                         <div class="card-title">Agregar Productos</div>
                         <div class="search-box">
                             <input type="text" id="pos-search" class="form-control" placeholder="Escribe CÓDIGO SKU o Nombre..." onkeyup="searchProduct(this.value)">
-                            <div id="search-results" class="search-results"></div>
                         </div>
 
                         <div class="categories-bar">
@@ -62,7 +61,7 @@
 
                 <div>
                     <div class="seller-margin-card">
-                        <div class="seller-margin-title">🔒 Vista Privada del Vendedor (Margen)</div>
+                        <div class="seller-margin-title">🔒 VISTA PRIVADA DEL VENDEDOR (MARGEN)</div>
                         <div class="seller-margin-grid">
                             <div>Costo Empresa: <span id="lbl-costo-total">$0.00</span></div>
                             <div>Tu Ganancia: <span id="lbl-ganancia-total">$0.00</span></div>
@@ -83,7 +82,7 @@
                             <label for="enable-expiry">Incluir Vigencia de Cotización</label>
                         </div>
 
-                        <div class="form-group" id="expiry-container" style="display: none;">
+                        <div class="form-group" id="expiry-container" style="display: none; margin-top: 8px;">
                             <input type="text" id="quote-expiry" class="form-control" placeholder="Ej. 3 días hábiles">
                         </div>
 
@@ -115,7 +114,7 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: CATÁLOGO DE PRODUCTOS -->
+        <!-- PESTAÑA 2: CATÁLOGO -->
         <div id="tab-catalog" class="tab-content" style="display:none;">
             <div class="card">
                 <div class="card-title">Registrar Nuevo Producto</div>
@@ -220,7 +219,7 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 5: DATOS BANCARIOS -->
+        <!-- PESTAÑA 5: BANCO -->
         <div id="tab-settings" class="tab-content" style="display:none;">
             <div class="card">
                 <div class="card-title">Configurar Datos de Transferencia</div>
@@ -247,15 +246,17 @@
             </div>
         </div>
 
-        <!-- MODAL COTIZACIÓN GENERADA -->
-        <div id="quote-modal" class="modal-card" style="display: none;">
-            <div class="card-title">
-                <span>Documento Generado</span>
-                <button class="btn btn-danger" style="width: auto; padding: 4px 10px;" onclick="closeModal()">Cerrar ✕</button>
-            </div>
-            <div id="quote-modal-content"></div>
-            <div style="margin-top: 15px;">
-                <button class="btn btn-success" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <!-- MODAL COMPROBANTE -->
+        <div id="quote-modal-backdrop" class="modal-backdrop" style="display: none;">
+            <div id="quote-modal" class="modal-card">
+                <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <span style="font-weight: bold; color: #555;">Vista Previa del Documento</span>
+                    <button class="btn btn-danger btn-sm" onclick="closeModal()">Cerrar ✕</button>
+                </div>
+                <div id="quote-modal-content"></div>
+                <div class="no-print" style="margin-top: 20px; text-align: right;">
+                    <button class="btn btn-success" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+                </div>
             </div>
         </div>
 
