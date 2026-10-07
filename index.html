@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FERRE-POS | Cotizaciones y Ventas</title>
+    <!-- Carga de SDK de Firebase para Sincronización en la Nube -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <header>
+        <h1>⚡ FERRE-POS</h1>
+        <span id="cloud-status">☁️ Conectando a la Nube...</span>
+    </header>
+
+    <nav>
+        <button id="btn-pos" class="nav-btn active" onclick="switchTab('pos')">🛒 Ventas / Cotizar</button>
+        <button id="btn-catalog" class="nav-btn" onclick="switchTab('catalog')">📦 Catálogo</button>
+        <button id="btn-history" class="nav-btn" onclick="switchTab('history')">📋 Historial</button>
+        <button id="btn-reports" class="nav-btn" onclick="switchTab('reports')">📊 Ganancias</button>
+        <button id="btn-settings" class="nav-btn" onclick="switchTab('settings')">🏦 Banco</button>
+    </nav>
+
+    <div class="container">
+        
+        <!-- PESTAÑA 1: VENTAS Y COTIZACIONES -->
+        <div id="tab-pos" class="tab-content active">
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <div class="card-title">Agregar Productos</div>
+                        <div class="search-box">
+                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe CÓDIGO SKU o Nombre..." onkeyup="searchProduct(this.value)">
+                            <div id="search-results" class="search-results"></div>
+                        </div>
+
+                        <div class="categories-bar">
+                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('todos')">Todos</button>
+                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('electrico')">Eléctrico</button>
+                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('ferreteria')">Ferretería</button>
+                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('plomeria')">Plomería</button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Producto</th>
+                                        <th>P. Público</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pos-catalog-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <!-- VISTA PRIVADA VENDEDOR MARGEN -->
+                    <div class="seller-margin-card">
+                        <div class="seller-margin-title">🔒 Vista Privada del Vendedor (Margen)</div>
+                        <div class="seller-margin-grid">
+                            <div>Costo Empresa: <span id="lbl-costo-total">$0.00</span></div>
+                            <div>Tu Ganancia: <span id="lbl-ganancia-total">$0.00</span></div>
+                            <div>Margen: <span id="lbl-margen-porcentaje">0%</span></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Detalle de Cotización / Venta</div>
+                        
+                        <div class="form-group">
+                            <label>Nombre del Cliente</label>
+                            <input type="text" id="client-name" class="form-control" placeholder="Cliente Gene
