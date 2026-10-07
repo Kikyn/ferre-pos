@@ -370,7 +370,7 @@ function calculateReports(sales) {
 }
 
 // ==========================================
-// 7. DATOS BANCARIOS Y MOSTRAR IMPRESIÓN
+// 7. DATOS BANCARIOS E IMPRESIÓN
 // ==========================================
 function saveBankSettings() {
     const name = document.getElementById('bank-name').value.trim();
@@ -468,6 +468,24 @@ function showModal(sale) {
     `;
 
     backdrop.style.display = 'flex';
+}
+
+function printDocument() {
+    const content = document.getElementById('quote-modal-content').innerHTML;
+    const printWindow = window.open('', '', 'height=600,width=800');
+
+    printWindow.document.write('<html><head><title>Imprimir Cotización</title>');
+    printWindow.document.write('<style>body{font-family: Arial, sans-serif; padding: 25px; margin: 0;} table{width: 100%; border-collapse: collapse;}</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(content);
+    printWindow.document.write('</body></html>');
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 300);
 }
 
 function closeModal() {
