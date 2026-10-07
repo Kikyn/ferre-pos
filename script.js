@@ -1,127 +1,42 @@
-// CONFIGURACIÓN DE FIREBASE PARA SINCRONIZACIÓN EN LA NUBE
+// Función para cambiar pestañas
+function switchTab(tabName) {
+    const tabs = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => tab.style.display = 'none');
+    
+    const activeTab = document.getElementById('tab-' + tabName);
+    if (activeTab) {
+        activeTab.style.display = 'block';
+    }
+
+    const navBtns = document.querySelectorAll('.nav-btn');
+    navBtns.forEach(btn => btn.classList.remove('active'));
+    
+    const activeBtn = document.getElementById('btn-' + tabName);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
+// Configuración de Firebase
 const firebaseConfig = {
-    databaseURL: "https://ferre-pos-default-rtdb.firebaseio.com/"
+    databaseURL: "https://ferre-pos-default-rtdb.firebaseio.com"
 };
 
 // Inicializar Firebase
-if (!firebase.apps.length) {
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-const db = firebase.database();
 
-// ESTADOS LOCALES DE CACHÉ
-let products = [];
-let cart = [];
-let history = [];
-let bankData = {
-    bank: 'BBVA',
-    holder: 'Mi Nombre Completo',
-    clabe: '012345678901234567',
-    account: '1234567890'
-};
+const db = (typeof firebase !== 'undefined') ? firebase.database() : null;
 
-// AL CARGAR LA PÁGINA: ESCUCHAR CAMBIOS EN LA NUBE EN TIEMPO REAL
-document.addEventListener('DOMContentLoaded', function() {
-    
-    // Escuchar catálogo en vivo
-    db.ref('products').on('value', (snapshot) => {
-        const data = snapshot.val();
-        products = data ? Object.values(data) : [];
-        renderCatalog();
-        renderPOSCatalog();
-        const statusEl = document.getElementById('cloud-status');
-        if (statusEl) statusEl.innerText = '🟢 Nube Conectada';
-    });
-
-    // Escuchar historial de ventas en vivo
-    db.ref('history').on('value', (snapshot) => {
-        const data = snapshot.val();
-        history = data ? Object.values(data) : [];
-        renderHistory();
-        calculateReports();
-    });
-
-    // Escuchar datos bancarios en vivo
-    db.ref('bankData').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            bankData = data;
-            loadBankSettings();
-        }
-    });
-});
-
-function normalizeText(text) {
-    return String(text || '').toLowerCase().trim();
-}
-
-// NAVEGACIÓN
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-    
-    const targetTab = document.getElementById('tab-' + tabId);
-    const targetBtn = document.getElementById('btn-' + tabId);
-    
-    if (targetTab) targetTab.classList.add('active');
-    if (targetBtn) targetBtn.classList.add('active');
-}
-
-function toggleStockField(checked) {
-    const el = document.getElementById('stock-field-container');
-    if (el) el.style.display = checked ? 'block' : 'none';
-}
-
-function toggleExpiryInput(checked) {
-    const el = document.getElementById('expiry-container');
-    if (el) el.style.display = checked ? 'block' : 'none';
-}
-
-// GUARDAR PRODUCTO EN LA NUBE DESDE COMPUTADORA O CELULAR
-function saveProduct() {
-    const code = document.getElementById('prod-code').value.trim();
-    const name = document.getElementById('prod-name').value.trim();
-    const category = document.getElementById('prod-category').value;
-    const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
-    const price = parseFloat(document.getElementById('prod-price').value) || 0;
-    const trackStock = document.getElementById('prod-track-stock').checked;
-    const stock = parseInt(document.getElementById('prod-stock').value) || 0;
-
-    if(!code || !name) {
-        alert('Por favor ingresa un código y un nombre para el producto.');
-        return;
-    }
-
-    const prodId = 'PROD-' + Date.now();
-    const newProd = {
-        id: prodId,
-        code,
-        name,
-        category,
-        cost,
-        price,
-        trackStock,
-        stock
-    };
-
-    // Guardar directo en Firebase Realtime Database
-    db.ref('products/' + prodId).set(newProd, (error) => {
-        if (!error) {
-            document.getElementById('prod-code').value = '';
-            document.getElementById('prod-name').value = '';
-            document.getElementById('prod-cost').value = '';
-            document.getElementById('prod-price').value = '';
-            alert('☁️ Producto guardado en la Nube con éxito. ¡Ya está visible en todos tus dispositivos!');
+if (db) {
+    const connectedRef = db.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        const statusElem = document.getElementById("cloud-status");
+        if (snap.val() === true) {
+            if (statusElem) statusElem.innerHTML = "🟢 Nube Conectada";
         } else {
-            alert('Error al guardar en la nube: ' + error.message);
+            if (statusElem) statusElem.innerHTML = "🔴 Sin Conexión";
         }
     });
 }
-
-function renderCatalog() {
-    const tbody = document.getElementById('catalog-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    products.forEach(p => {
-        const margin = p.price - p.cost
