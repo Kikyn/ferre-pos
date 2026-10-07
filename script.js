@@ -5,18 +5,15 @@ const firebaseConfig = {
     databaseURL: "https://ferre-pos-default-rtdb.firebaseio.com"
 };
 
-// Inicializar la librería de Firebase
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 
 const db = (typeof firebase !== 'undefined') ? firebase.database() : null;
 
-// Variables Globales
 let allProducts = {};
 let cart = [];
 
-// Escuchar estado de la conexión en tiempo real
 if (db) {
     db.ref(".info/connected").on("value", (snap) => {
         const statusElem = document.getElementById("cloud-status");
@@ -25,21 +22,18 @@ if (db) {
         }
     });
 
-    // Escuchar el catálogo de productos en tiempo real
     db.ref("products").on("value", (snapshot) => {
         allProducts = snapshot.val() || {};
         renderCatalog(allProducts);
         renderPOSCatalog(allProducts);
     });
 
-    // Escuchar historial de ventas
     db.ref("sales").on("value", (snapshot) => {
         const sales = snapshot.val() || {};
         renderHistory(sales);
         calculateReports(sales);
     });
 
-    // Cargar datos bancarios al iniciar
     db.ref("settings/bank").once("value", (snapshot) => {
         const bankData = snapshot.val();
         if (bankData) {
@@ -269,7 +263,6 @@ function renderCart() {
     const netProfit = totalClient - totalCost;
     const marginPercent = totalClient > 0 ? ((netProfit / totalClient) * 100).toFixed(1) : 0;
 
-    // Actualizar Totales Públicos y Privados
     document.getElementById('cart-total').innerText = '$' + totalClient.toFixed(2);
     document.getElementById('lbl-costo-total').innerText = '$' + totalCost.toFixed(2);
     document.getElementById('lbl-ganancia-total').innerText = '$' + netProfit.toFixed(2);
@@ -301,7 +294,7 @@ function generateQuote(type) {
         folio: 'FOL-' + Date.now().toString().slice(-6),
         date: new Date().toLocaleString(),
         client: clientName,
-        type: type, // 'cotizacion' o 'venta'
+        type: type,
         items: cart,
         total: totalClient,
         profit: totalClient - totalCost,
@@ -347,6 +340,15 @@ function renderHistory(sales) {
     });
 }
 
+function reprintSale(key) {
+    if (db) {
+        db.ref("sales/" + key).once("value", (snapshot) => {
+            const sale = snapshot.val();
+            if (sale) showModal(sale);
+        });
+    }
+}
+
 function calculateReports(sales) {
     let totalSales = 0;
     let netProfit = 0;
@@ -368,7 +370,7 @@ function calculateReports(sales) {
 }
 
 // ==========================================
-// 7. DATOS BANCARIOS Y IMPRESIÓN
+// 7. DATOS BANCARIOS Y MOSTRAR IMPRESIÓN
 // ==========================================
 function saveBankSettings() {
     const name = document.getElementById('bank-name').value.trim();
@@ -393,48 +395,82 @@ function saveBankSettings() {
 }
 
 function showModal(sale) {
-    const modal = document.getElementById('quote-modal');
+    const backdrop = document.getElementById('quote-modal-backdrop');
     const container = document.getElementById('quote-modal-content');
-    if (!modal || !container) return;
+    if (!backdrop || !container) return;
+
+    const bankName = document.getElementById('bank-name') ? document.getElementById('bank-name').value : '';
+    const bankHolder = document.getElementById('bank-holder') ? document.getElementById('bank-holder').value : '';
+    const bankClabe = document.getElementById('bank-clabe') ? document.getElementById('bank-clabe').value : '';
 
     let itemsHtml = '';
     sale.items.forEach(item => {
         itemsHtml += `
-            <tr>
-                <td>${item.name}</td>
-                <td>${item.qty}</td>
-                <td>$${item.price.toFixed(2)}</td>
-                <td>$${(item.price * item.qty).toFixed(2)}</td>
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px 0;">${item.name}</td>
+                <td style="text-align: center; padding: 8px 0;">${item.qty}</td>
+                <td style="text-align: right; padding: 8px 0;">$${item.price.toFixed(2)}</td>
+                <td style="text-align: right; padding: 8px 0;">$${(item.price * item.qty).toFixed(2)}</td>
             </tr>
         `;
     });
 
+    let bankHtml = '';
+    if (bankClabe) {
+        bankHtml = `
+            <div style="margin-top: 20px; padding: 12px; border: 1px dashed #bbb; border-radius: 6px; background: #fafafa;">
+                <h4 style="margin: 0 0 6px 0; color: #333; font-size: 0.9rem;">Datos para Transferencia / Depósito:</h4>
+                <p style="margin: 2px 0; font-size: 0.85rem;"><b>Banco:</b> ${bankName}</p>
+                <p style="margin: 2px 0; font-size: 0.85rem;"><b>Titular:</b> ${bankHolder}</p>
+                <p style="margin: 2px 0; font-size: 0.85rem;"><b>CLABE:</b> ${bankClabe}</p>
+            </div>
+        `;
+    }
+
     container.innerHTML = `
-        <h3>${sale.type === 'venta' ? 'RECIBO DE VENTA' : 'COTIZACIÓN DE MATERIALES'}</h3>
-        <p><b>Folio:</b> ${sale.folio} | <b>Fecha:</b> ${sale.date}</p>
-        <p><b>Cliente:</b> ${sale.client}</p>
-        ${sale.expiry ? `<p><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
-        <hr>
-        <table style="width:100%; border-collapse: collapse; margin-bottom: 15px;">
+        <div style="text-align: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 18px;">
+            <h2 style="margin: 0; font-size: 1.6rem; color: #111;">FERRE-POS</h2>
+            <p style="margin: 4px 0 0 0; font-weight: bold; font-size: 1rem; letter-spacing: 1px; color: #444;">
+                ${sale.type === 'venta' ? 'RECIBO DE VENTA' : 'COTIZACIÓN DE MATERIALES'}
+            </p>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 0.9rem;">
+            <div>
+                <p style="margin: 3px 0;"><b>Cliente:</b> ${sale.client}</p>
+                ${sale.expiry ? `<p style="margin: 3px 0; color: #c53030;"><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
+            </div>
+            <div style="text-align: right;">
+                <p style="margin: 3px 0;"><b>Folio:</b> ${sale.folio}</p>
+                <p style="margin: 3px 0;"><b>Fecha:</b> ${sale.date}</p>
+            </div>
+        </div>
+
+        <table style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.9rem;">
             <thead>
-                <tr style="border-bottom: 1px solid #ccc; text-align: left;">
-                    <th>Producto</th>
-                    <th>Cant.</th>
-                    <th>Precio</th>
-                    <th>Total</th>
+                <tr style="border-bottom: 2px solid #222; text-align: left;">
+                    <th style="padding-bottom: 6px;">Producto</th>
+                    <th style="text-align: center; padding-bottom: 6px;">Cant.</th>
+                    <th style="text-align: right; padding-bottom: 6px;">Precio U.</th>
+                    <th style="text-align: right; padding-bottom: 6px;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 ${itemsHtml}
             </tbody>
         </table>
-        <h3 style="text-align: right;">Total: $${parseFloat(sale.total).toFixed(2)}</h3>
+
+        <div style="text-align: right; margin-top: 15px; font-size: 1.1rem;">
+            <p style="margin: 0;"><b>Total a Pagar: <span style="font-size: 1.3rem;">$${parseFloat(sale.total).toFixed(2)}</span> MXN</b></p>
+        </div>
+
+        ${bankHtml}
     `;
 
-    modal.style.display = 'block';
+    backdrop.style.display = 'flex';
 }
 
 function closeModal() {
-    const modal = document.getElementById('quote-modal');
-    if (modal) modal.style.display = 'none';
+    const backdrop = document.getElementById('quote-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'none';
 }
