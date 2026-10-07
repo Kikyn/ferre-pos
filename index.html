@@ -249,13 +249,13 @@
         <!-- MODAL COMPROBANTE -->
         <div id="quote-modal-backdrop" class="modal-backdrop" style="display: none;">
             <div id="quote-modal" class="modal-card">
-                <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <span style="font-weight: bold; color: #555;">Vista Previa del Documento</span>
                     <button class="btn btn-danger btn-sm" onclick="closeModal()">Cerrar ✕</button>
                 </div>
                 <div id="quote-modal-content"></div>
-                <div class="no-print" style="margin-top: 20px; text-align: right;">
-                    <button class="btn btn-success" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button class="btn btn-success" onclick="printDocument()">🖨️ Imprimir / Guardar PDF</button>
                 </div>
             </div>
         </div>
