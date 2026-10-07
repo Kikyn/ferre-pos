@@ -204,7 +204,7 @@ th {
     font-size: 0.85rem;
 }
 
-/* ESTILOS DEL MODAL WEB */
+/* MODAL WEB */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -229,35 +229,29 @@ th {
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
-/* ==========================================
-   REGLAS DE IMPRESIÓN (SOLO FORMATO PROFESIONAL)
-   ========================================== */
+/* IMPRESIÓN DIRECTA */
 @media print {
-    /* Ocultar elementos del programa */
-    header, nav, .container, .no-print {
-        display: none !important;
+    body * {
+        visibility: hidden !important;
     }
 
-    body {
-        background: white !important;
-        color: black !important;
+    #quote-modal, #quote-modal * {
+        visibility: visible !important;
     }
 
-    .modal-backdrop {
+    #quote-modal {
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
         width: 100% !important;
-        height: auto !important;
-        background: transparent !important;
-        display: block !important;
-    }
-
-    .modal-card {
+        max-width: 100% !important;
         box-shadow: none !important;
         padding: 0 !important;
         margin: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        background: white !important;
+    }
+
+    .no-print {
+        display: none !important;
     }
 }
