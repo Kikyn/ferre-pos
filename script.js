@@ -18,6 +18,7 @@ let termsSettings = localStorage.getItem('ferre_terms') || "Precios sujetos a ca
 
 let cart = [];
 let html5QrCode = null;
+let activeScannerTarget = null; // 'pos' o 'catalog'
 let currentTimeFilter = 'today';
 let currentReportTimeFilter = 'today';
 
@@ -94,9 +95,9 @@ function getSortedProducts(productsObj) {
         .map(key => ({ key: key, ...productsObj[key] }))
         .sort((a, b) => {
             if (a.price !== b.price) {
-                return (a.price || 0) - (b.price || 0); // Menor a Mayor
+                return (a.price || 0) - (b.price || 0);
             }
-            return (a.name || '').localeCompare(b.name || ''); // A-Z
+            return (a.name || '').localeCompare(b.name || '');
         });
 }
 
@@ -124,10 +125,11 @@ function toggleExpiryInput(checked) {
 }
 
 // ==========================================
-// 4. CATÁLOGO CON BÚSQUEDA Y EDICIÓN
+// 4. CATÁLOGO CON SKU Y CÓDIGO DE BARRAS SEPARADOS
 // ==========================================
 function saveProduct() {
-    const code = document.getElementById('prod-code').value.trim();
+    const sku = document.getElementById('prod-sku').value.trim();
+    const barcode = document.getElementById('prod-barcode').value.trim();
     const name = document.getElementById('prod-name').value.trim();
     const category = document.getElementById('prod-category').value;
     const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
@@ -136,13 +138,13 @@ function saveProduct() {
     const stock = trackStock ? (parseInt(document.getElementById('prod-stock').value) || 0) : 'N/A';
     const editingKey = document.getElementById('editing-product-key').value;
 
-    if (!code || !name) {
-        alert("⚠️ Ingresa el Código SKU y Nombre del producto.");
+    if (!sku || !name) {
+        alert("⚠️ Ingresa el SKU y Nombre del producto.");
         return;
     }
 
-    const cleanCode = code.replace(/[.#$/[\]]/g, "_");
-    const newProduct = { code, name, category, cost, price, trackStock, stock };
+    const cleanCode = sku.replace(/[.#$/[\]]/g, "_");
+    const newProduct = { sku, barcode, code: sku, name, category, cost, price, trackStock, stock };
 
     if (editingKey && editingKey !== cleanCode) {
         delete allProducts[editingKey];
@@ -168,7 +170,8 @@ function editProduct(key) {
 
     document.getElementById('editing-product-key').value = key;
     document.getElementById('catalog-form-title').innerText = "✏️ Modificar Producto: " + p.name;
-    document.getElementById('prod-code').value = p.code || '';
+    document.getElementById('prod-sku').value = p.sku || p.code || '';
+    document.getElementById('prod-barcode').value = p.barcode || '';
     document.getElementById('prod-name').value = p.name || '';
     document.getElementById('prod-category').value = p.category || 'general';
     document.getElementById('prod-cost').value = p.cost || 0;
@@ -187,7 +190,8 @@ function editProduct(key) {
 function cancelEditProduct() {
     document.getElementById('editing-product-key').value = '';
     document.getElementById('catalog-form-title').innerText = "Registrar Nuevo Producto";
-    document.getElementById('prod-code').value = '';
+    document.getElementById('prod-sku').value = '';
+    document.getElementById('prod-barcode').value = '';
     document.getElementById('prod-name').value = '';
     document.getElementById('prod-cost').value = '';
     document.getElementById('prod-price').value = '';
@@ -204,12 +208,19 @@ function renderCatalog(filterQuery = '') {
     const q = filterQuery.toLowerCase().trim();
 
     sorted.forEach(p => {
-        if (q && !p.code.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q)) return;
+        const itemSku = (p.sku || p.code || '').toLowerCase();
+        const itemBarcode = (p.barcode || '').toLowerCase();
+        const itemName = (p.name || '').toLowerCase();
+
+        if (q && !itemSku.includes(q) && !itemBarcode.includes(q) && !itemName.includes(q)) return;
 
         const profit = (p.price || 0) - (p.cost || 0);
         const tr = document.createElement('tr');
+        
+        const displayCode = p.barcode ? `<b>${p.sku || p.code}</b><br><small style="color:#666;">📷 ${p.barcode}</small>` : `<b>${p.sku || p.code}</b>`;
+
         tr.innerHTML = `
-            <td><b>${p.code}</b></td>
+            <td>${displayCode}</td>
             <td>${p.name}</td>
             <td><span class="badge">${p.category || 'General'}</span></td>
             <td>$${parseFloat(p.cost || 0).toFixed(2)}</td>
@@ -240,7 +251,7 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 5. PUNTO DE VENTA Y ESCÁNER DE CÁMARA
+// 5. PUNTO DE VENTA Y ESCÁNER MÚLTIPLE (POS/CATÁLOGO)
 // ==========================================
 function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
     const tbody = document.getElementById('pos-catalog-body');
@@ -252,11 +263,18 @@ function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
 
     sorted.forEach(p => {
         if (categoryFilter !== 'todos' && p.category !== categoryFilter) return;
-        if (q && !p.code.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q)) return;
+
+        const itemSku = (p.sku || p.code || '').toLowerCase();
+        const itemBarcode = (p.barcode || '').toLowerCase();
+        const itemName = (p.name || '').toLowerCase();
+
+        if (q && !itemSku.includes(q) && !itemBarcode.includes(q) && !itemName.includes(q)) return;
+
+        const displayCode = p.barcode ? `${p.sku || p.code} / ${p.barcode}` : `${p.sku || p.code}`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${p.code}</td>
+            <td><small>${displayCode}</small></td>
             <td>${p.name}</td>
             <td><b>$${parseFloat(p.price || 0).toFixed(2)}</b></td>
             <td><button class="btn btn-primary btn-sm" onclick="addToCart('${p.key}')">Agregar 🛒</button></td>
@@ -283,7 +301,7 @@ function addToCart(key) {
     } else {
         cart.push({
             key: key,
-            code: product.code,
+            code: product.sku || product.code,
             name: product.name,
             cost: parseFloat(product.cost || 0),
             price: parseFloat(product.price || 0),
@@ -294,23 +312,36 @@ function addToCart(key) {
     renderCart();
 }
 
-// Lectura de Código por Cámara
-function toggleCameraScanner() {
-    const container = document.getElementById('camera-scanner-container');
+// Lector por cámara reutilizable (POS o Catálogo)
+function toggleCameraScanner(target) {
+    activeScannerTarget = target;
+    const containerId = target === 'pos' ? 'camera-scanner-container-pos' : 'camera-scanner-container-catalog';
+    const readerId = target === 'pos' ? 'reader-pos' : 'reader-catalog';
+
+    const container = document.getElementById(containerId);
     if (container.style.display === 'none') {
         container.style.display = 'block';
-        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode = new Html5Qrcode(readerId);
         html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: 250 },
             (decodedText) => {
-                document.getElementById('pos-search').value = decodedText;
-                searchProduct(decodedText);
-                
-                // Si coincide exacto con un SKU, agregarlo directo
-                const matchedKey = Object.keys(allProducts).find(k => allProducts[k].code.toLowerCase() === decodedText.toLowerCase());
-                if (matchedKey) {
-                    addToCart(matchedKey);
+                if (activeScannerTarget === 'catalog') {
+                    document.getElementById('prod-barcode').value = decodedText;
+                } else {
+                    document.getElementById('pos-search').value = decodedText;
+                    searchProduct(decodedText);
+                    
+                    // Buscar coincidencia exacta por Barcode o SKU
+                    const matchedKey = Object.keys(allProducts).find(k => {
+                        const p = allProducts[k];
+                        return (p.barcode && p.barcode.toLowerCase() === decodedText.toLowerCase()) ||
+                               ((p.sku || p.code).toLowerCase() === decodedText.toLowerCase());
+                    });
+
+                    if (matchedKey) {
+                        addToCart(matchedKey);
+                    }
                 }
                 stopCameraScanner();
             }
@@ -323,11 +354,18 @@ function toggleCameraScanner() {
 function stopCameraScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => {
-            document.getElementById('camera-scanner-container').style.display = 'none';
+            hideScannerContainers();
         }).catch(() => {
-            document.getElementById('camera-scanner-container').style.display = 'none';
+            hideScannerContainers();
         });
+    } else {
+        hideScannerContainers();
     }
+}
+
+function hideScannerContainers() {
+    document.getElementById('camera-scanner-container-pos').style.display = 'none';
+    document.getElementById('camera-scanner-container-catalog').style.display = 'none';
 }
 
 // Cargador de Cotización previa a Venta
