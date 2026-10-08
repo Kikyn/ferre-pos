@@ -40,7 +40,6 @@
             </div>
 
             <div class="grid-2 pos-grid">
-                <!-- COLUMNA PRODUCTOS -->
                 <div>
                     <div class="card">
                         <div class="card-title">Buscar o Escanear Productos</div>
@@ -78,7 +77,6 @@
                     </div>
                 </div>
 
-                <!-- COLUMNA CARRITO / COBRO -->
                 <div id="cart-section" class="cart-section-container">
                     <div class="seller-margin-card">
                         <div class="seller-margin-title">🔒 VISTA PRIVADA DEL VENDEDOR</div>
@@ -136,7 +134,6 @@
                 </div>
             </div>
 
-            <!-- BARRA FLOTANTE MÓVIL (STICKY CART BAR) -->
             <div id="mobile-cart-bar" class="mobile-cart-bar" onclick="toggleMobileCart()">
                 <div>
                     🛒 <span id="mobile-cart-count">0 items</span>
@@ -188,7 +185,11 @@
                     </div>
                     <div class="form-group">
                         <label>Costo Empresa ($)</label>
-                        <input type="number" id="prod-cost" class="form-control" placeholder="0.00" step="0.01">
+                        <input type="number" id="prod-cost" class="form-control" placeholder="0.00" step="0.01" oninput="calculatePriceFromMargin()">
+                    </div>
+                    <div class="form-group">
+                        <label>% Ganancia (Auto-calcula)</label>
+                        <input type="number" id="prod-margin-pct" class="form-control" placeholder="Ej. 30" step="1" oninput="calculatePriceFromMargin()">
                     </div>
                     <div class="form-group">
                         <label>Precio Público Venta ($)</label>
@@ -214,6 +215,16 @@
 
             <div class="card">
                 <div class="card-title">Catálogo Sincronizado</div>
+                
+                <!-- FILTRO POR CATEGORÍA EN CATÁLOGO -->
+                <div class="categories-bar" style="margin-bottom: 12px;">
+                    <button class="btn btn-secondary btn-sm" id="btn-cat-filter-todos" onclick="filterCatalogCategory('todos')">Todos</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-cat-filter-electrico" onclick="filterCatalogCategory('electrico')">Eléctrico</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-cat-filter-ferreteria" onclick="filterCatalogCategory('ferreteria')">Ferretería</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-cat-filter-plomeria" onclick="filterCatalogCategory('plomeria')">Plomería</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-cat-filter-general" onclick="filterCatalogCategory('general')">General</button>
+                </div>
+
                 <div class="search-box" style="margin-bottom: 12px;">
                     <input type="text" id="catalog-search" class="form-control" placeholder="🔎 Buscar por Código, Barras o Nombre..." oninput="filterCatalogTable(this.value)">
                 </div>
