@@ -47,13 +47,13 @@
                     <div class="card">
                         <div class="card-title">Buscar o Escanear Productos</div>
                         <div class="search-row" style="margin-bottom: 10px;">
-                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe SKU o Nombre..." oninput="searchProduct(this.value)">
-                            <button class="btn btn-warning" onclick="toggleCameraScanner()">📷 Escanear</button>
+                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe Código, SKU o Nombre..." oninput="searchProduct(this.value)">
+                            <button class="btn btn-warning" onclick="toggleCameraScanner('pos')">📷 Escanear</button>
                         </div>
 
-                        <!-- CÁMARA ESCÁNER -->
-                        <div id="camera-scanner-container" style="display: none; margin-bottom: 15px;">
-                            <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                        <!-- CÁMARA ESCÁNER POS -->
+                        <div id="camera-scanner-container-pos" style="display: none; margin-bottom: 15px;">
+                            <div id="reader-pos" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
                             <button class="btn btn-danger btn-sm" style="margin-top: 5px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
                         </div>
 
@@ -68,7 +68,7 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Código</th>
+                                        <th>Código/SKU</th>
                                         <th>Producto</th>
                                         <th>Precio</th>
                                         <th>Acción</th>
@@ -140,11 +140,29 @@
             <div class="card">
                 <div class="card-title" id="catalog-form-title">Registrar Nuevo Producto</div>
                 <input type="hidden" id="editing-product-key" value="">
+                
                 <div class="grid-2">
                     <div class="form-group">
-                        <label>Código SKU / Barras</label>
-                        <input type="text" id="prod-code" class="form-control" placeholder="Ej. ELE-001">
+                        <label>SKU (Obligatorio)</label>
+                        <input type="text" id="prod-sku" class="form-control" placeholder="Ej. ELE-001">
                     </div>
+
+                    <div class="form-group">
+                        <label>Código de Barras (Opcional)</label>
+                        <div class="search-row">
+                            <input type="text" id="prod-barcode" class="form-control" placeholder="Ej. 750123456789">
+                            <button class="btn btn-warning" type="button" onclick="toggleCameraScanner('catalog')">📷 Scan</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CÁMARA ESCÁNER CATÁLOGO -->
+                <div id="camera-scanner-container-catalog" style="display: none; margin-bottom: 15px;">
+                    <div id="reader-catalog" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                    <button class="btn btn-danger btn-sm" style="margin-top: 5px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
+                </div>
+
+                <div class="grid-2">
                     <div class="form-group">
                         <label>Nombre del Material</label>
                         <input type="text" id="prod-name" class="form-control" placeholder="Ej. Cable Cobre 10 AWG">
@@ -177,6 +195,7 @@
                         <input type="number" id="prod-stock" class="form-control" value="10">
                     </div>
                 </div>
+
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <button class="btn btn-success" id="btn-save-prod" onclick="saveProduct()">Guardar en la Nube ☁️</button>
                     <button class="btn btn-secondary" id="btn-cancel-edit" style="display: none;" onclick="cancelEditProduct()">Cancelar Edición</button>
@@ -186,13 +205,13 @@
             <div class="card">
                 <div class="card-title">Catálogo Sincronizado</div>
                 <div class="search-box" style="margin-bottom: 12px;">
-                    <input type="text" id="catalog-search" class="form-control" placeholder="🔎 Buscar en el catálogo por Código o Nombre..." oninput="filterCatalogTable(this.value)">
+                    <input type="text" id="catalog-search" class="form-control" placeholder="🔎 Buscar por SKU, Código de Barras o Nombre..." oninput="filterCatalogTable(this.value)">
                 </div>
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
-                                <th>Código</th>
+                                <th>SKU / Cod. Barras</th>
                                 <th>Descripción</th>
                                 <th>Categoría</th>
                                 <th>Costo</th>
