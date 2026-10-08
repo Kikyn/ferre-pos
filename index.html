@@ -2,38 +2,59 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FERRE-POS | Cotizaciones y Ventas</title>
-    <!-- Librerías de Firebase -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Lector de Código de Barras por Cámara (Html5Qrcode) -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
     <header>
         <h1>⚡ FERRE-POS</h1>
-        <span id="cloud-status">☁️ Conectando a la Nube...</span>
+        <span id="cloud-status">🟢 Conectado</span>
     </header>
 
     <nav>
-        <button id="btn-pos" class="nav-btn active" onclick="switchTab('pos')">🛒 Ventas / Cotizar</button>
+        <button id="btn-pos" class="nav-btn active" onclick="switchTab('pos')">🛒 Ventas</button>
         <button id="btn-catalog" class="nav-btn" onclick="switchTab('catalog')">📦 Catálogo</button>
         <button id="btn-history" class="nav-btn" onclick="switchTab('history')">📋 Historial</button>
         <button id="btn-reports" class="nav-btn" onclick="switchTab('reports')">📊 Ganancias</button>
-        <button id="btn-settings" class="nav-btn" onclick="switchTab('settings')">🏦 Banco</button>
+        <button id="btn-settings" class="nav-btn" onclick="switchTab('settings')">⚙️ Ajustes</button>
     </nav>
 
     <div class="container">
         
         <!-- PESTAÑA 1: VENTAS Y COTIZACIONES -->
         <div id="tab-pos" class="tab-content active">
+            
+            <!-- BUSCADOR RÁPIDO DE COTIZACIONES -->
+            <div class="card quote-loader-card">
+                <div class="card-title">🔎 Cargar Cotización Previa para Venta</div>
+                <div class="search-row">
+                    <input type="text" id="load-quote-folio" class="form-control" placeholder="Ej. COT-00001">
+                    <button class="btn btn-primary" onclick="loadQuoteToCart()">Cargar a Carrito 🛒</button>
+                </div>
+            </div>
+
             <div class="grid-2">
                 <div>
                     <div class="card">
-                        <div class="card-title">Agregar Productos</div>
-                        <div class="search-box">
-                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe CÓDIGO SKU o Nombre..." onkeyup="searchProduct(this.value)">
+                        <div class="card-title">Buscar o Escanear Productos</div>
+                        <div class="search-row" style="margin-bottom: 10px;">
+                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe SKU o Nombre..." oninput="searchProduct(this.value)">
+                            <button class="btn btn-warning" onclick="toggleCameraScanner()">📷 Escanear</button>
+                        </div>
+
+                        <!-- CÁMARA ESCÁNER -->
+                        <div id="camera-scanner-container" style="display: none; margin-bottom: 15px;">
+                            <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                            <button class="btn btn-danger btn-sm" style="margin-top: 5px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
                         </div>
 
                         <div class="categories-bar">
@@ -49,7 +70,7 @@
                                     <tr>
                                         <th>Código</th>
                                         <th>Producto</th>
-                                        <th>P. Público</th>
+                                        <th>Precio</th>
                                         <th>Acción</th>
                                     </tr>
                                 </thead>
@@ -61,10 +82,10 @@
 
                 <div>
                     <div class="seller-margin-card">
-                        <div class="seller-margin-title">🔒 VISTA PRIVADA DEL VENDEDOR (MARGEN)</div>
+                        <div class="seller-margin-title">🔒 VISTA PRIVADA DEL VENDEDOR</div>
                         <div class="seller-margin-grid">
-                            <div>Costo Empresa: <span id="lbl-costo-total">$0.00</span></div>
-                            <div>Tu Ganancia: <span id="lbl-ganancia-total">$0.00</span></div>
+                            <div>Costo: <span id="lbl-costo-total">$0.00</span></div>
+                            <div>Ganancia: <span id="lbl-ganancia-total">$0.00</span></div>
                             <div>Margen: <span id="lbl-margen-porcentaje">0%</span></div>
                         </div>
                     </div>
@@ -79,11 +100,11 @@
 
                         <div class="toggle-container">
                             <input type="checkbox" id="enable-expiry" onchange="toggleExpiryInput(this.checked)">
-                            <label for="enable-expiry">Incluir Vigencia de Cotización</label>
+                            <label for="enable-expiry">Incluir Vigencia (Cotizaciones)</label>
                         </div>
 
                         <div class="form-group" id="expiry-container" style="display: none; margin-top: 8px;">
-                            <input type="text" id="quote-expiry" class="form-control" placeholder="Ej. 3 días hábiles">
+                            <input type="text" id="quote-expiry" class="form-control" placeholder="Ej. 5 días hábiles">
                         </div>
 
                         <div class="table-responsive" style="margin-bottom: 15px;">
@@ -164,6 +185,9 @@
 
             <div class="card">
                 <div class="card-title">Catálogo Sincronizado</div>
+                <div class="search-box" style="margin-bottom: 12px;">
+                    <input type="text" id="catalog-search" class="form-control" placeholder="🔎 Buscar en el catálogo por Código o Nombre..." oninput="filterCatalogTable(this.value)">
+                </div>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -171,9 +195,9 @@
                                 <th>Código</th>
                                 <th>Descripción</th>
                                 <th>Categoría</th>
-                                <th>Costo Emp.</th>
+                                <th>Costo</th>
                                 <th>P. Público</th>
-                                <th>Tu Ganancia</th>
+                                <th>Ganancia</th>
                                 <th>Stock</th>
                                 <th>Acciones</th>
                             </tr>
@@ -187,7 +211,16 @@
         <!-- PESTAÑA 3: HISTORIAL -->
         <div id="tab-history" class="tab-content" style="display:none;">
             <div class="card">
-                <div class="card-title">Historial de Cotizaciones y Ventas</div>
+                <div class="card-title">Historial de Documentos</div>
+                
+                <!-- FILTROS DE FECHAS -->
+                <div class="filter-time-bar">
+                    <button class="btn btn-secondary btn-sm active-time" id="btn-time-today" onclick="setTimeFilter('today')">Hoy</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-time-week" onclick="setTimeFilter('week')">Esta Semana</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-time-month" onclick="setTimeFilter('month')">Este Mes</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-time-all" onclick="setTimeFilter('all')">Todos</button>
+                </div>
+
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -197,7 +230,7 @@
                                 <th>Tipo</th>
                                 <th>Total</th>
                                 <th>Ganancia</th>
-                                <th>Estado</th>
+                                <th>Fecha</th>
                                 <th>Acción</th>
                             </tr>
                         </thead>
@@ -209,26 +242,34 @@
 
         <!-- PESTAÑA 4: GANANCIAS -->
         <div id="tab-reports" class="tab-content" style="display:none;">
+            <div class="card">
+                <div class="card-title">Período de Evaluación</div>
+                <div class="filter-time-bar">
+                    <button class="btn btn-secondary btn-sm active-time" id="btn-rep-today" onclick="setReportTimeFilter('today')">Hoy</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-rep-week" onclick="setReportTimeFilter('week')">Esta Semana</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-rep-month" onclick="setReportTimeFilter('month')">Este Mes</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-rep-all" onclick="setReportTimeFilter('all')">Todos</button>
+                </div>
+            </div>
+
             <div class="grid-2">
                 <div class="card">
                     <div class="card-title" style="color: var(--success);">Ventas Cobradas</div>
                     <h2 id="rep-total-sales" class="metric-val">$0.00</h2>
-                    <p class="metric-sub">Total vendido a precio público.</p>
+                    <p class="metric-sub">Total vendido en el período.</p>
                 </div>
                 <div class="card">
                     <div class="card-title" style="color: var(--primary);">Ganancia Neta Limpia</div>
                     <h2 id="rep-net-profit" class="metric-val" style="color: var(--success);">$0.00</h2>
-                    <p class="metric-sub">Diferencia directa a tu bolsillo.</p>
+                    <p class="metric-sub">Margen directo a tu negocio.</p>
                 </div>
             </div>
         </div>
 
-        <!-- PESTAÑA 5: BANCO -->
+        <!-- PESTAÑA 5: CONFIGURACIÓN -->
         <div id="tab-settings" class="tab-content" style="display:none;">
             <div class="card">
-                <div class="card-title">Configurar Datos de Transferencia</div>
-                <p class="metric-sub" style="margin-bottom: 15px;">Estos datos se mostrarán en la cotización entregada al cliente.</p>
-                
+                <div class="card-title">Datos Bancarios para Cotizaciones</div>
                 <div class="form-group">
                     <label>Nombre del Banco</label>
                     <input type="text" id="bank-name" class="form-control" placeholder="Ej. BBVA / Banamex / STP">
@@ -242,11 +283,17 @@
                     <input type="text" id="bank-clabe" class="form-control" placeholder="000000000000000000">
                 </div>
                 <div class="form-group">
-                    <label>Número de Cuenta / Tarjeta (Opcional)</label>
+                    <label>Número de Cuenta / Tarjeta</label>
                     <input type="text" id="bank-account" class="form-control" placeholder="Opcional">
                 </div>
+            </div>
 
-                <button class="btn btn-primary" onclick="saveBankSettings()">Guardar Datos Bancarios</button>
+            <div class="card">
+                <div class="card-title">Términos y Condiciones (Pie de Documento)</div>
+                <div class="form-group">
+                    <textarea id="terms-text" class="form-control" rows="3" placeholder="Ej. Precios sujetos a cambio sin previo aviso. No se aceptan devoluciones en material cortado."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">Guardar Configuración 💾</button>
             </div>
         </div>
 
@@ -267,5 +314,10 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration Failed', err));
+        }
+    </script>
 </body>
 </html>
