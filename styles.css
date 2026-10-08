@@ -20,7 +20,7 @@
 body {
     background-color: #f1f5f9;
     color: var(--text-main);
-    padding-bottom: 70px; /* Espacio para barra de carrito móvil */
+    padding-bottom: 70px;
 }
 
 header {
@@ -160,7 +160,6 @@ nav::-webkit-scrollbar {
     font-size: 0.85rem;
 }
 
-/* FILAS DE BÚSQUEDA Y BOTONES TÁCTILES */
 .search-row-mobile {
     display: flex;
     gap: 8px;
@@ -291,12 +290,11 @@ th {
     display: none;
 }
 
-.filter-time-bar .btn.active-time {
+.categories-bar .btn.active-cat, .filter-time-bar .btn.active-time {
     background: var(--primary);
     color: white;
 }
 
-/* BARRA FLOTANTE MÓVIL (STICKY CART) */
 .mobile-cart-bar {
     display: none;
     position: fixed;
