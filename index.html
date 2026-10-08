@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link rel="stylesheet" href="styles.css?v=3.0">
+    <link rel="stylesheet" href="styles.css?v=4.0">
 </head>
 <body>
 
@@ -42,11 +42,13 @@
             <div class="grid-2 pos-grid">
                 <div>
                     <div class="card">
-                        <div class="card-title">Buscar o Escanear Productos</div>
+                        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Buscar o Escanear</span>
+                            <button class="btn btn-warning scan-btn btn-sm" onclick="toggleCameraScanner('pos')">📷 Escanear</button>
+                        </div>
                         
                         <div class="search-row-mobile" style="margin-bottom: 10px;">
                             <input type="text" id="pos-search" class="form-control" placeholder="Escribe Código, Barras o Nombre..." oninput="searchProduct(this.value)">
-                            <button class="btn btn-warning scan-btn" onclick="toggleCameraScanner('pos')">📷 Escanear</button>
                         </div>
 
                         <div id="camera-scanner-container-pos" class="scanner-box" style="display: none;">
@@ -55,25 +57,13 @@
                         </div>
 
                         <div class="categories-bar">
-                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('todos')">Todos</button>
-                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('electrico')">Eléctrico</button>
-                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('ferreteria')">Ferretería</button>
-                            <button class="btn btn-secondary btn-sm" onclick="filterCategory('plomeria')">Plomería</button>
+                            <button class="btn btn-secondary btn-sm active-cat" id="btn-pos-cat-todos" onclick="filterCategory('todos')">Todos</button>
+                            <button class="btn btn-secondary btn-sm" id="btn-pos-cat-electrico" onclick="filterCategory('electrico')">Eléctrico</button>
+                            <button class="btn btn-secondary btn-sm" id="btn-pos-cat-ferreteria" onclick="filterCategory('ferreteria')">Ferretería</button>
+                            <button class="btn btn-secondary btn-sm" id="btn-pos-cat-plomeria" onclick="filterCategory('plomeria')">Plomería</button>
                         </div>
 
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Código</th>
-                                        <th>Producto</th>
-                                        <th>Precio</th>
-                                        <th>Cant.</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pos-catalog-body"></tbody>
-                            </table>
-                        </div>
+                        <div id="pos-products-compact-list" class="compact-grid"></div>
                     </div>
                 </div>
 
@@ -107,7 +97,7 @@
                             <input type="text" id="quote-expiry" class="form-control" placeholder="Ej. 5 días hábiles">
                         </div>
 
-                        <div class="table-responsive" style="margin-bottom: 15px; max-height: 250px;">
+                        <div class="table-responsive" style="margin-bottom: 15px; max-height: 200px;">
                             <table>
                                 <thead>
                                     <tr>
@@ -146,79 +136,13 @@
         <!-- PESTAÑA 2: CATÁLOGO -->
         <div id="tab-catalog" class="tab-content" style="display:none;">
             <div class="card">
-                <div class="card-title" id="catalog-form-title">Registrar Nuevo Producto</div>
-                <input type="hidden" id="editing-product-key" value="">
-                
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Código del Producto (Obligatorio)</label>
-                        <input type="text" id="prod-code-input" class="form-control" placeholder="Ej. ELE-001">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Código de Barras (Opcional / Escanear)</label>
-                        <div class="search-row-mobile">
-                            <input type="text" id="prod-barcode" class="form-control" placeholder="Ej. 750123456789">
-                            <button class="btn btn-warning scan-btn" type="button" onclick="toggleCameraScanner('catalog')">📷 Escanear</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="camera-scanner-container-catalog" class="scanner-box" style="display: none;">
-                    <div id="reader-catalog"></div>
-                    <button class="btn btn-danger btn-sm" style="margin-top: 8px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
-                </div>
-
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Nombre del Material</label>
-                        <input type="text" id="prod-name" class="form-control" placeholder="Ej. Cable Cobre 10 AWG">
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría</label>
-                        <select id="prod-category" class="form-control" onchange="applyDefaultCategoryMargin()">
-                            <option value="electrico">Eléctrico (20%)</option>
-                            <option value="ferreteria">Ferretería (27%)</option>
-                            <option value="plomeria">Plomería (27%)</option>
-                            <option value="general">General (20%)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Costo Empresa ($)</label>
-                        <input type="number" id="prod-cost" class="form-control" placeholder="0.00" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label>% Ganancia (Editable)</label>
-                        <div class="search-row-mobile">
-                            <input type="number" id="prod-margin-pct" class="form-control" value="20" step="1">
-                            <button class="btn btn-primary scan-btn" type="button" onclick="calculatePriceFromMargin()">⚡ Calcular %</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Precio Público Venta ($)</label>
-                        <input type="number" id="prod-price" class="form-control" placeholder="0.00" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <div class="toggle-container" style="margin-top: 20px;">
-                            <input type="checkbox" id="prod-track-stock" checked onchange="toggleStockField(this.checked)">
-                            <label for="prod-track-stock">Controlar Cantidad en Stock</label>
-                        </div>
-                    </div>
-                    <div class="form-group" id="stock-field-container">
-                        <label>Stock Disponible</label>
-                        <input type="number" id="prod-stock" class="form-control" value="10">
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="btn btn-success" id="btn-save-prod" onclick="saveProduct()">Guardar en la Nube ☁️</button>
-                    <button class="btn btn-secondary" id="btn-cancel-edit" style="display: none;" onclick="cancelEditProduct()">Cancelar Edición</button>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="card-title" style="margin:0;">Catálogo de Productos</div>
+                    <button class="btn btn-success btn-sm" onclick="openProductModal()">➕ Agregar Producto</button>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-title">Catálogo Sincronizado</div>
-                
                 <div class="categories-bar" style="margin-bottom: 12px;">
                     <button class="btn btn-secondary btn-sm active-cat" id="btn-cat-filter-todos" onclick="filterCatalogCategory('todos')">Todos</button>
                     <button class="btn btn-secondary btn-sm" id="btn-cat-filter-electrico" onclick="filterCatalogCategory('electrico')">Eléctrico</button>
@@ -337,6 +261,103 @@
             </div>
         </div>
 
+        <!-- MODAL 1: REGISTRO/EDICIÓN DE PRODUCTO EN CATÁLOGO -->
+        <div id="product-modal-backdrop" class="modal-backdrop" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <span class="modal-header-title" id="catalog-form-title">Registrar Nuevo Producto</span>
+                    <button class="btn btn-danger btn-sm" onclick="closeProductModal()">✕</button>
+                </div>
+                <input type="hidden" id="editing-product-key" value="">
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Código del Producto (Obligatorio)</label>
+                        <input type="text" id="prod-code-input" class="form-control" placeholder="Ej. ELE-001">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Código de Barras (Opcional)</label>
+                        <div class="search-row-mobile">
+                            <input type="text" id="prod-barcode" class="form-control" placeholder="Ej. 750123456789">
+                            <button class="btn btn-warning scan-btn" type="button" onclick="toggleCameraScanner('catalog')">📷 Scan</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camera-scanner-container-catalog" class="scanner-box" style="display: none;">
+                    <div id="reader-catalog"></div>
+                    <button class="btn btn-danger btn-sm" style="margin-top: 8px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Nombre del Material</label>
+                        <input type="text" id="prod-name" class="form-control" placeholder="Ej. Cable Cobre 10 AWG">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select id="prod-category" class="form-control" onchange="applyDefaultCategoryMargin()">
+                            <option value="electrico">Eléctrico (20%)</option>
+                            <option value="ferreteria">Ferretería (27%)</option>
+                            <option value="plomeria">Plomería (27%)</option>
+                            <option value="general">General (20%)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Costo Empresa ($)</label>
+                        <input type="number" id="prod-cost" class="form-control" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>% Ganancia (Editable)</label>
+                        <div class="search-row-mobile">
+                            <input type="number" id="prod-margin-pct" class="form-control" value="20" step="1">
+                            <button class="btn btn-primary scan-btn" type="button" onclick="calculatePriceFromMargin()">⚡ Calcular %</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Público Venta ($)</label>
+                        <input type="number" id="prod-price" class="form-control" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <div class="toggle-container" style="margin-top: 20px;">
+                            <input type="checkbox" id="prod-track-stock" checked onchange="toggleStockField(this.checked)">
+                            <label for="prod-track-stock">Controlar Cantidad en Stock</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="stock-field-container">
+                        <label>Stock Disponible</label>
+                        <input type="number" id="prod-stock" class="form-control" value="10">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-success" style="flex:1;" id="btn-save-prod" onclick="saveProduct()">Guardar ☁️</button>
+                    <button class="btn btn-secondary" onclick="closeProductModal()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 2: SELECCIÓN DE CANTIDAD RÁPIDA EN VENTAS -->
+        <div id="qty-modal-backdrop" class="modal-backdrop" style="display: none;">
+            <div class="modal-card" style="max-width:350px; text-align:center;">
+                <div class="modal-header">
+                    <span class="modal-header-title" id="qty-modal-prod-name">Producto</span>
+                    <button class="btn btn-danger btn-sm" onclick="closeQtyModal()">✕</button>
+                </div>
+                <div style="font-size:1.2rem; font-weight:bold; color:var(--primary); margin:10px 0;" id="qty-modal-prod-price">$0.00</div>
+                <div class="form-group">
+                    <label>Ingresa o ajusta la cantidad:</label>
+                    <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:10px;">
+                        <button class="qty-btn" style="width:45px; height:45px; font-size:1.5rem;" onclick="changeQtyModalInput(-1)">-</button>
+                        <input type="number" id="qty-modal-input" class="form-control" value="1" min="1" style="width:80px; text-align:center; font-size:1.3rem; font-weight:bold;">
+                        <button class="qty-btn" style="width:45px; height:45px; font-size:1.5rem;" onclick="changeQtyModalInput(1)">+</button>
+                    </div>
+                </div>
+                <button class="btn btn-success" style="width:100%; margin-top:15px; padding:12px;" onclick="confirmQtyModalAdd()">Agregar al Carrito 🛒</button>
+            </div>
+        </div>
+
         <!-- MODAL COMPROBANTE -->
         <div id="quote-modal-backdrop" class="modal-backdrop" style="display: none;">
             <div id="quote-modal" class="modal-card">
@@ -355,7 +376,7 @@
 
     <div id="toast-msg" class="toast-msg"></div>
 
-    <script src="script.js?v=3.0"></script>
+    <script src="script.js?v=4.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration Failed', err));
