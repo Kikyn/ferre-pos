@@ -1,0 +1,15 @@
+{
+  "short_name": "FERRE-POS",
+  "name": "FERRE-POS Sistema de Ventas",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone"
+}
