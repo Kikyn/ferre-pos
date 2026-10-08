@@ -23,6 +23,13 @@ let currentTimeFilter = 'all';
 let currentReportTimeFilter = 'all';
 let currentCatalogCategoryFilter = 'todos';
 
+const defaultMargins = {
+    electrico: 20,
+    ferreteria: 27,
+    plomeria: 27,
+    general: 20
+};
+
 function updateOnlineStatus() {
     const statusElem = document.getElementById("cloud-status");
     if (navigator.onLine) {
@@ -110,7 +117,7 @@ function getSortedProducts(productsObj) {
 }
 
 // ==========================================
-// 3. NAVEGACIÓN
+// 3. NAVEGACIÓN Y PESTAÑAS
 // ==========================================
 function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
@@ -140,17 +147,29 @@ function toggleMobileCart() {
 }
 
 // ==========================================
-// 4. CÁLCULO DE PRECIO CON MARGEN Y REDONDEO DE CENTAVOS
+// 4. LÓGICA DE PORCENTAJES Y REDONDEO
 // ==========================================
+function applyDefaultCategoryMargin() {
+    const category = document.getElementById('prod-category').value;
+    const marginInput = document.getElementById('prod-margin-pct');
+    if (marginInput && defaultMargins[category] !== undefined) {
+        marginInput.value = defaultMargins[category];
+    }
+}
+
 function calculatePriceFromMargin() {
     const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
     const marginPct = parseFloat(document.getElementById('prod-margin-pct').value) || 0;
 
-    if (cost > 0 && marginPct > 0) {
-        const rawPrice = cost * (1 + (marginPct / 100));
-        const roundedPrice = Math.ceil(rawPrice); // Redondea al peso superior entero
-        document.getElementById('prod-price').value = roundedPrice;
+    if (cost <= 0) {
+        alert("⚠️ Por favor ingresa primero el Costo Empresa.");
+        return;
     }
+
+    const rawPrice = cost * (1 + (marginPct / 100));
+    const roundedPrice = Math.ceil(rawPrice);
+    document.getElementById('prod-price').value = roundedPrice;
+    showToast("Calculado: $" + roundedPrice + ".00 MXN");
 }
 
 // ==========================================
@@ -215,7 +234,7 @@ function editProduct(key) {
     document.getElementById('prod-category').value = p.category || 'general';
     document.getElementById('prod-cost').value = p.cost || 0;
     document.getElementById('prod-price').value = p.price || 0;
-    document.getElementById('prod-margin-pct').value = '';
+    applyDefaultCategoryMargin();
     
     const trackStock = p.trackStock !== false && p.stock !== 'N/A';
     document.getElementById('prod-track-stock').checked = trackStock;
@@ -234,8 +253,8 @@ function cancelEditProduct() {
     document.getElementById('prod-barcode').value = '';
     document.getElementById('prod-name').value = '';
     document.getElementById('prod-cost').value = '';
-    document.getElementById('prod-margin-pct').value = '';
     document.getElementById('prod-price').value = '';
+    applyDefaultCategoryMargin();
     document.getElementById('btn-save-prod').innerText = "Guardar en la Nube ☁️";
     document.getElementById('btn-cancel-edit').style.display = "none";
 }
@@ -294,7 +313,7 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 6. PUNTO DE VENTA Y BOTONES (+ / -) MÓVILES
+// 6. PUNTO DE VENTA Y ESCÁNER DE CÁMARA
 // ==========================================
 function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
     const tbody = document.getElementById('pos-catalog-body');
@@ -831,6 +850,7 @@ function closeModal() {
     if (backdrop) backdrop.style.display = 'none';
 }
 
+applyDefaultCategoryMargin();
 filterCatalogCategory('todos');
 renderCatalog();
 renderPOSCatalog();
