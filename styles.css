@@ -20,7 +20,7 @@
 body {
     background-color: #f1f5f9;
     color: var(--text-main);
-    padding-bottom: 30px;
+    padding-bottom: 70px; /* Espacio para barra de carrito móvil */
 }
 
 header {
@@ -160,7 +160,7 @@ nav::-webkit-scrollbar {
     font-size: 0.85rem;
 }
 
-/* FILAS DE BÚSQUEDA ADAPTATIVAS EN CELULAR */
+/* FILAS DE BÚSQUEDA Y BOTONES TÁCTILES */
 .search-row-mobile {
     display: flex;
     gap: 8px;
@@ -172,10 +172,44 @@ nav::-webkit-scrollbar {
         flex-direction: column;
         align-items: stretch;
     }
-    
     .scan-btn {
         width: 100%;
     }
+}
+
+.qty-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1f5f9;
+    padding: 2px 4px;
+    border-radius: 6px;
+}
+
+.qty-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #e2e8f0;
+    color: #0f172a;
+    font-weight: bold;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qty-btn:active {
+    background: #cbd5e1;
+}
+
+.qty-val {
+    min-width: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.85rem;
 }
 
 .btn {
@@ -262,11 +296,26 @@ th {
     color: white;
 }
 
-.toggle-container {
-    display: flex;
+/* BARRA FLOTANTE MÓVIL (STICKY CART) */
+.mobile-cart-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #0f172a;
+    color: white;
+    padding: 10px 16px;
+    justify-content: space-between;
     align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    z-index: 99;
+}
+
+@media (max-width: 768px) {
+    .mobile-cart-bar {
+        display: flex;
+    }
 }
 
 .scanner-box {
@@ -277,15 +326,20 @@ th {
     border-radius: 8px;
 }
 
-.metric-val {
-    font-size: 1.5rem;
+.toast-msg {
+    position: fixed;
+    top: 60px;
+    right: 50%;
+    transform: translateX(50%);
+    background: #16a34a;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
     font-weight: bold;
-    margin: 6px 0;
-}
-
-.metric-sub {
-    font-size: 0.75rem;
-    color: #64748b;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    z-index: 10000;
+    display: none;
 }
 
 .modal-backdrop {
