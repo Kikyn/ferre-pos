@@ -21,6 +21,7 @@ let html5QrCode = null;
 let activeScannerTarget = null;
 let currentTimeFilter = 'all';
 let currentReportTimeFilter = 'all';
+let currentCatalogCategoryFilter = 'todos';
 
 function updateOnlineStatus() {
     const statusElem = document.getElementById("cloud-status");
@@ -139,8 +140,32 @@ function toggleMobileCart() {
 }
 
 // ==========================================
-// 4. CATÁLOGO
+// 4. CÁLCULO DE PRECIO CON MARGEN Y REDONDEO DE CENTAVOS
 // ==========================================
+function calculatePriceFromMargin() {
+    const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
+    const marginPct = parseFloat(document.getElementById('prod-margin-pct').value) || 0;
+
+    if (cost > 0 && marginPct > 0) {
+        const rawPrice = cost * (1 + (marginPct / 100));
+        const roundedPrice = Math.ceil(rawPrice); // Redondea al peso superior entero
+        document.getElementById('prod-price').value = roundedPrice;
+    }
+}
+
+// ==========================================
+// 5. CATÁLOGO Y FILTRO POR CATEGORÍAS
+// ==========================================
+function filterCatalogCategory(category) {
+    currentCatalogCategoryFilter = category;
+    
+    document.querySelectorAll('#tab-catalog .categories-bar .btn').forEach(btn => btn.classList.remove('active-cat'));
+    const activeBtn = document.getElementById('btn-cat-filter-' + category);
+    if (activeBtn) activeBtn.classList.add('active-cat');
+
+    renderCatalog(document.getElementById('catalog-search').value);
+}
+
 function saveProduct() {
     const code = document.getElementById('prod-code-input').value.trim();
     const barcode = document.getElementById('prod-barcode').value.trim();
@@ -190,6 +215,7 @@ function editProduct(key) {
     document.getElementById('prod-category').value = p.category || 'general';
     document.getElementById('prod-cost').value = p.cost || 0;
     document.getElementById('prod-price').value = p.price || 0;
+    document.getElementById('prod-margin-pct').value = '';
     
     const trackStock = p.trackStock !== false && p.stock !== 'N/A';
     document.getElementById('prod-track-stock').checked = trackStock;
@@ -208,6 +234,7 @@ function cancelEditProduct() {
     document.getElementById('prod-barcode').value = '';
     document.getElementById('prod-name').value = '';
     document.getElementById('prod-cost').value = '';
+    document.getElementById('prod-margin-pct').value = '';
     document.getElementById('prod-price').value = '';
     document.getElementById('btn-save-prod').innerText = "Guardar en la Nube ☁️";
     document.getElementById('btn-cancel-edit').style.display = "none";
@@ -222,6 +249,8 @@ function renderCatalog(filterQuery = '') {
     const q = filterQuery.toLowerCase().trim();
 
     sorted.forEach(p => {
+        if (currentCatalogCategoryFilter !== 'todos' && p.category !== currentCatalogCategoryFilter) return;
+
         const itemCode = (p.code || p.sku || '').toLowerCase();
         const itemBarcode = (p.barcode || '').toLowerCase();
         const itemName = (p.name || '').toLowerCase();
@@ -265,7 +294,7 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 5. PUNTO DE VENTA Y BOTONES (+ / -) MÓVILES
+// 6. PUNTO DE VENTA Y BOTONES (+ / -) MÓVILES
 // ==========================================
 function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
     const tbody = document.getElementById('pos-catalog-body');
@@ -488,7 +517,6 @@ function renderCart() {
     document.getElementById('lbl-ganancia-total').innerText = '$' + netProfit.toFixed(2);
     document.getElementById('lbl-margen-porcentaje').innerText = marginPercent + '%';
 
-    // Barra flotante móvil
     const mobileCount = document.getElementById('mobile-cart-count');
     const mobileTotal = document.getElementById('mobile-cart-total');
     if (mobileCount) mobileCount.innerText = totalItems + " piezas";
@@ -496,7 +524,7 @@ function renderCart() {
 }
 
 // ==========================================
-// 6. GENERAR FOLIOS Y REGISTRO
+// 7. GENERAR FOLIOS Y REGISTRO
 // ==========================================
 function generateNextFolio(type) {
     const prefix = type === 'venta' ? 'VEN-' : 'COT-';
@@ -564,7 +592,7 @@ function generateQuote(type) {
 }
 
 // ==========================================
-// 7. HISTORIAL
+// 8. HISTORIAL
 // ==========================================
 function parseSaleDate(s) {
     if (s.timestamp) return new Date(s.timestamp);
@@ -636,7 +664,7 @@ function reprintSale(key) {
 }
 
 // ==========================================
-// 8. REPORTES Y GANANCIAS
+// 9. REPORTES Y GANANCIAS
 // ==========================================
 function setReportTimeFilter(filter) {
     currentReportTimeFilter = filter;
@@ -676,7 +704,7 @@ function calculateReports() {
 }
 
 // ==========================================
-// 9. CONFIGURACIÓN Y MODAL IMPRESIÓN
+// 10. CONFIGURACIÓN Y MODAL IMPRESIÓN
 // ==========================================
 function saveSettings() {
     const bank = {
@@ -803,6 +831,7 @@ function closeModal() {
     if (backdrop) backdrop.style.display = 'none';
 }
 
+filterCatalogCategory('todos');
 renderCatalog();
 renderPOSCatalog();
 renderHistory();
