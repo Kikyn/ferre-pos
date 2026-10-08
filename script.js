@@ -1,5 +1,5 @@
 // ==========================================
-// 1. CONFIGURACIÓN E INICIALIZACIÓN FIREBASE
+// 1. CONFIGURACIÓN E INICIALIZACIÓN FIREBASE Y LOCALSTORAGE
 // ==========================================
 const firebaseConfig = {
     databaseURL: "https://ferre-pos-default-rtdb.firebaseio.com"
@@ -11,53 +11,104 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 
 const db = (typeof firebase !== 'undefined') ? firebase.database() : null;
 
-let allProducts = {};
+let allProducts = JSON.parse(localStorage.getItem('ferre_products')) || {};
+let allSales = JSON.parse(localStorage.getItem('ferre_sales')) || {};
+let bankSettings = JSON.parse(localStorage.getItem('ferre_bank')) || {};
+let termsSettings = localStorage.getItem('ferre_terms') || "Precios sujetos a cambio sin previo aviso.";
+
 let cart = [];
+let html5QrCode = null;
+let currentTimeFilter = 'today';
+let currentReportTimeFilter = 'today';
+
+// Sincronización Online / Offline
+function updateOnlineStatus() {
+    const statusElem = document.getElementById("cloud-status");
+    if (navigator.onLine) {
+        if (statusElem) statusElem.innerHTML = "🟢 Conectado";
+        syncOfflineData();
+    } else {
+        if (statusElem) statusElem.innerHTML = "🟠 Sin Red (Offline)";
+    }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
 
 if (db) {
     db.ref(".info/connected").on("value", (snap) => {
-        const statusElem = document.getElementById("cloud-status");
-        if (statusElem) {
-            statusElem.innerHTML = snap.val() === true ? "🟢 Nube Conectada" : "🔴 Sin Conexión";
+        if (snap.val() === true && navigator.onLine) {
+            updateOnlineStatus();
         }
     });
 
     db.ref("products").on("value", (snapshot) => {
-        allProducts = snapshot.val() || {};
-        renderCatalog(allProducts);
-        renderPOSCatalog(allProducts);
+        const val = snapshot.val() || {};
+        allProducts = val;
+        localStorage.setItem('ferre_products', JSON.stringify(val));
+        renderCatalog();
+        renderPOSCatalog();
     });
 
     db.ref("sales").on("value", (snapshot) => {
-        const sales = snapshot.val() || {};
-        renderHistory(sales);
-        calculateReports(sales);
+        const val = snapshot.val() || {};
+        allSales = val;
+        localStorage.setItem('ferre_sales', JSON.stringify(val));
+        renderHistory();
+        calculateReports();
     });
 
-    db.ref("settings/bank").once("value", (snapshot) => {
-        const bankData = snapshot.val();
-        if (bankData) {
-            if (document.getElementById('bank-name')) document.getElementById('bank-name').value = bankData.name || '';
-            if (document.getElementById('bank-holder')) document.getElementById('bank-holder').value = bankData.holder || '';
-            if (document.getElementById('bank-clabe')) document.getElementById('bank-clabe').value = bankData.clabe || '';
-            if (document.getElementById('bank-account')) document.getElementById('bank-account').value = bankData.account || '';
+    db.ref("settings").on("value", (snapshot) => {
+        const val = snapshot.val() || {};
+        if (val.bank) {
+            bankSettings = val.bank;
+            localStorage.setItem('ferre_bank', JSON.stringify(val.bank));
+            if (document.getElementById('bank-name')) document.getElementById('bank-name').value = val.bank.name || '';
+            if (document.getElementById('bank-holder')) document.getElementById('bank-holder').value = val.bank.holder || '';
+            if (document.getElementById('bank-clabe')) document.getElementById('bank-clabe').value = val.bank.clabe || '';
+            if (document.getElementById('bank-account')) document.getElementById('bank-account').value = val.bank.account || '';
+        }
+        if (val.terms) {
+            termsSettings = val.terms;
+            localStorage.setItem('ferre_terms', val.terms);
+            if (document.getElementById('terms-text')) document.getElementById('terms-text').value = val.terms;
         }
     });
 }
 
+function syncOfflineData() {
+    const pendingSales = JSON.parse(localStorage.getItem('ferre_pending_sales')) || [];
+    if (pendingSales.length > 0 && db) {
+        pendingSales.forEach(sale => {
+            db.ref("sales/" + sale.folio).set(sale);
+        });
+        localStorage.removeItem('ferre_pending_sales');
+    }
+}
+
 // ==========================================
-// 2. NAVEGACIÓN Y PESTAÑAS
+// 2. ORDENAMIENTO (A-Z Y DE MENOR A MAYOR PRECIO)
+// ==========================================
+function getSortedProducts(productsObj) {
+    return Object.keys(productsObj)
+        .map(key => ({ key: key, ...productsObj[key] }))
+        .sort((a, b) => {
+            if (a.price !== b.price) {
+                return (a.price || 0) - (b.price || 0); // Menor a Mayor
+            }
+            return (a.name || '').localeCompare(b.name || ''); // A-Z
+        });
+}
+
+// ==========================================
+// 3. NAVEGACIÓN Y PESTAÑAS
 // ==========================================
 function switchTab(tabName) {
-    const tabs = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => tab.style.display = 'none');
-    
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
     const activeTab = document.getElementById('tab-' + tabName);
     if (activeTab) activeTab.style.display = 'block';
 
-    const navBtns = document.querySelectorAll('.nav-btn');
-    navBtns.forEach(btn => btn.classList.remove('active'));
-    
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById('btn-' + tabName);
     if (activeBtn) activeBtn.classList.add('active');
 }
@@ -73,7 +124,7 @@ function toggleExpiryInput(checked) {
 }
 
 // ==========================================
-// 3. GESTIÓN DEL CATÁLOGO DE PRODUCTOS (CON EDICIÓN)
+// 4. CATÁLOGO CON BÚSQUEDA Y EDICIÓN
 // ==========================================
 function saveProduct() {
     const code = document.getElementById('prod-code').value.trim();
@@ -86,40 +137,29 @@ function saveProduct() {
     const editingKey = document.getElementById('editing-product-key').value;
 
     if (!code || !name) {
-        alert("⚠️ Por favor ingresa el Código SKU y el Nombre del producto.");
-        return;
-    }
-
-    if (!db) {
-        alert("Error: No hay conexión con la base de datos.");
+        alert("⚠️ Ingresa el Código SKU y Nombre del producto.");
         return;
     }
 
     const cleanCode = code.replace(/[.#$/[\]]/g, "_");
+    const newProduct = { code, name, category, cost, price, trackStock, stock };
 
-    const newProduct = {
-        code: code,
-        name: name,
-        category: category,
-        cost: cost,
-        price: price,
-        trackStock: trackStock,
-        stock: stock
-    };
-
-    // Si se cambió la clave SKU al editar, borrar la antigua
     if (editingKey && editingKey !== cleanCode) {
-        db.ref("products/" + editingKey).remove();
+        delete allProducts[editingKey];
+        if (db) db.ref("products/" + editingKey).remove();
     }
 
-    db.ref("products/" + cleanCode).set(newProduct, (error) => {
-        if (error) {
-            alert("Error al guardar: " + error.message);
-        } else {
-            alert(editingKey ? "✅ Producto actualizado correctamente" : "✅ Producto guardado correctamente en la nube");
-            cancelEditProduct();
-        }
-    });
+    allProducts[cleanCode] = newProduct;
+    localStorage.setItem('ferre_products', JSON.stringify(allProducts));
+
+    if (db && navigator.onLine) {
+        db.ref("products/" + cleanCode).set(newProduct);
+    }
+
+    alert(editingKey ? "✅ Producto actualizado" : "✅ Producto guardado");
+    cancelEditProduct();
+    renderCatalog();
+    renderPOSCatalog();
 }
 
 function editProduct(key) {
@@ -141,7 +181,6 @@ function editProduct(key) {
 
     document.getElementById('btn-save-prod').innerText = "Guardar Cambios ✏️";
     document.getElementById('btn-cancel-edit').style.display = "inline-block";
-
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -156,13 +195,17 @@ function cancelEditProduct() {
     document.getElementById('btn-cancel-edit').style.display = "none";
 }
 
-function renderCatalog(products) {
+function renderCatalog(filterQuery = '') {
     const tbody = document.getElementById('catalog-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    Object.keys(products).forEach(key => {
-        const p = products[key];
+    const sorted = getSortedProducts(allProducts);
+    const q = filterQuery.toLowerCase().trim();
+
+    sorted.forEach(p => {
+        if (q && !p.code.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q)) return;
+
         const profit = (p.price || 0) - (p.cost || 0);
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -174,70 +217,60 @@ function renderCatalog(products) {
             <td style="color: var(--success); font-weight: bold;">$${profit.toFixed(2)}</td>
             <td>${p.stock}</td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="editProduct('${key}')">✏️ Editar</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${key}')">Eliminar</button>
+                <button class="btn btn-warning btn-sm" onclick="editProduct('${p.key}')">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.key}')">✕</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
+function filterCatalogTable(query) {
+    renderCatalog(query);
+}
+
 function deleteProduct(key) {
-    if (confirm("¿Estás seguro de eliminar este producto de la nube?")) {
-        db.ref("products/" + key).remove();
+    if (confirm("¿Eliminar este producto?")) {
+        delete allProducts[key];
+        localStorage.setItem('ferre_products', JSON.stringify(allProducts));
+        if (db && navigator.onLine) db.ref("products/" + key).remove();
+        renderCatalog();
+        renderPOSCatalog();
     }
 }
 
 // ==========================================
-// 4. PUNTO DE VENTA Y CARRITO (POS)
+// 5. PUNTO DE VENTA Y ESCÁNER DE CÁMARA
 // ==========================================
-function renderPOSCatalog(products) {
+function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
     const tbody = document.getElementById('pos-catalog-body');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    Object.keys(products).forEach(key => {
-        const p = products[key];
+    const sorted = getSortedProducts(allProducts);
+    const q = filterQuery.toLowerCase().trim();
+
+    sorted.forEach(p => {
+        if (categoryFilter !== 'todos' && p.category !== categoryFilter) return;
+        if (q && !p.code.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q)) return;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${p.code}</td>
             <td>${p.name}</td>
             <td><b>$${parseFloat(p.price || 0).toFixed(2)}</b></td>
-            <td><button class="btn btn-primary btn-sm" onclick="addToCart('${key}')">Agregar 🛒</button></td>
+            <td><button class="btn btn-primary btn-sm" onclick="addToCart('${p.key}')">Agregar 🛒</button></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 function searchProduct(query) {
-    const q = query.toLowerCase().trim();
-    const filtered = {};
-
-    Object.keys(allProducts).forEach(key => {
-        const p = allProducts[key];
-        if (p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)) {
-            filtered[key] = p;
-        }
-    });
-
-    renderPOSCatalog(filtered);
+    renderPOSCatalog(query);
 }
 
 function filterCategory(cat) {
-    if (cat === 'todos') {
-        renderPOSCatalog(allProducts);
-        return;
-    }
-
-    const filtered = {};
-    Object.keys(allProducts).forEach(key => {
-        const p = allProducts[key];
-        if (p.category === cat) {
-            filtered[key] = p;
-        }
-    });
-
-    renderPOSCatalog(filtered);
+    renderPOSCatalog(document.getElementById('pos-search').value, cat);
 }
 
 function addToCart(key) {
@@ -259,6 +292,62 @@ function addToCart(key) {
     }
 
     renderCart();
+}
+
+// Lectura de Código por Cámara
+function toggleCameraScanner() {
+    const container = document.getElementById('camera-scanner-container');
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: 250 },
+            (decodedText) => {
+                document.getElementById('pos-search').value = decodedText;
+                searchProduct(decodedText);
+                
+                // Si coincide exacto con un SKU, agregarlo directo
+                const matchedKey = Object.keys(allProducts).find(k => allProducts[k].code.toLowerCase() === decodedText.toLowerCase());
+                if (matchedKey) {
+                    addToCart(matchedKey);
+                }
+                stopCameraScanner();
+            }
+        ).catch(err => alert("Error abriendo cámara: " + err));
+    } else {
+        stopCameraScanner();
+    }
+}
+
+function stopCameraScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('camera-scanner-container').style.display = 'none';
+        }).catch(() => {
+            document.getElementById('camera-scanner-container').style.display = 'none';
+        });
+    }
+}
+
+// Cargador de Cotización previa a Venta
+function loadQuoteToCart() {
+    const folioInput = document.getElementById('load-quote-folio').value.trim().toUpperCase();
+    if (!folioInput) {
+        alert("Ingresa un Folio de Cotización.");
+        return;
+    }
+
+    const sale = allSales[folioInput];
+    if (!sale) {
+        alert("No se encontró la cotización: " + folioInput);
+        return;
+    }
+
+    cart = sale.items.map(i => ({ ...i }));
+    document.getElementById('client-name').value = sale.client || '';
+    renderCart();
+    alert("✅ Cotización " + folioInput + " cargada al carrito.");
 }
 
 function updateCartQty(index, newQty) {
@@ -291,7 +380,7 @@ function renderCart() {
         tr.innerHTML = `
             <td>${item.name}</td>
             <td>
-                <input type="number" value="${item.qty}" min="1" style="width: 50px;" onchange="updateCartQty(${index}, this.value)">
+                <input type="number" value="${item.qty}" min="1" style="width: 45px;" onchange="updateCartQty(${index}, this.value)">
             </td>
             <td>$${item.price.toFixed(2)}</td>
             <td><b>$${itemTotal.toFixed(2)}</b></td>
@@ -310,11 +399,26 @@ function renderCart() {
 }
 
 // ==========================================
-// 5. REGISTRAR VENTAS Y COTIZACIONES
+// 6. GENERAR FOLIOS CONSECUTIVOS (`COT-00001` Y `VEN-00001`)
 // ==========================================
+function generateNextFolio(type) {
+    const prefix = type === 'venta' ? 'VEN-' : 'COT-';
+    let maxNum = 0;
+
+    Object.keys(allSales).forEach(folio => {
+        if (folio.startsWith(prefix)) {
+            const numPart = parseInt(folio.replace(prefix, '')) || 0;
+            if (numPart > maxNum) maxNum = numPart;
+        }
+    });
+
+    const nextNum = maxNum + 1;
+    return prefix + nextNum.toString().padStart(5, '0');
+}
+
 function generateQuote(type) {
     if (cart.length === 0) {
-        alert("El carrito está vacío. Agrega productos antes de generar el documento.");
+        alert("El carrito está vacío.");
         return;
     }
 
@@ -330,8 +434,10 @@ function generateQuote(type) {
         totalCost += item.cost * item.qty;
     });
 
+    const folio = generateNextFolio(type);
     const saleData = {
-        folio: 'FOL-' + Date.now().toString().slice(-6),
+        folio: folio,
+        timestamp: Date.now(),
         date: new Date().toLocaleString(),
         client: clientName,
         type: type,
@@ -342,30 +448,65 @@ function generateQuote(type) {
         status: type === 'venta' ? 'Cobrado' : 'Pendiente'
     };
 
-    if (db) {
-        db.ref("sales/" + saleData.folio).set(saleData, (error) => {
-            if (error) {
-                alert("Error al registrar en la nube: " + error.message);
-            } else {
-                showModal(saleData);
-                cart = [];
-                renderCart();
-                document.getElementById('client-name').value = '';
-            }
-        });
+    allSales[folio] = saleData;
+    localStorage.setItem('ferre_sales', JSON.stringify(allSales));
+
+    if (db && navigator.onLine) {
+        db.ref("sales/" + folio).set(saleData);
+    } else {
+        const pendingSales = JSON.parse(localStorage.getItem('ferre_pending_sales')) || [];
+        pendingSales.push(saleData);
+        localStorage.setItem('ferre_pending_sales', JSON.stringify(pendingSales));
     }
+
+    showModal(saleData);
+    cart = [];
+    renderCart();
+    document.getElementById('client-name').value = '';
 }
 
 // ==========================================
-// 6. HISTORIAL Y GANANCIAS
+// 7. HISTORIAL CON FILTROS POR FECHAS (HOY / SEMANA / MES)
 // ==========================================
-function renderHistory(sales) {
+function isSameDay(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+}
+
+function isSameWeek(d1, d2) {
+    const oneDay = 24 * 60 * 60 * 1000;
+    const diffDays = Math.round(Math.abs((d1 - d2) / oneDay));
+    return diffDays <= 7;
+}
+
+function isSameMonth(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth();
+}
+
+function setTimeFilter(filter) {
+    currentTimeFilter = filter;
+    document.querySelectorAll('.filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
+    document.getElementById('btn-time-' + filter).classList.add('active-time');
+    renderHistory();
+}
+
+function renderHistory() {
     const tbody = document.getElementById('history-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    Object.keys(sales).reverse().forEach(key => {
-        const s = sales[key];
+    const now = new Date();
+    const sortedKeys = Object.keys(allSales).reverse();
+
+    sortedKeys.forEach(key => {
+        const s = allSales[key];
+        const saleDate = new Date(s.timestamp || Date.now());
+
+        if (currentTimeFilter === 'today' && !isSameDay(now, saleDate)) return;
+        if (currentTimeFilter === 'week' && !isSameWeek(now, saleDate)) return;
+        if (currentTimeFilter === 'month' && !isSameMonth(now, saleDate)) return;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><b>${s.folio}</b></td>
@@ -373,28 +514,41 @@ function renderHistory(sales) {
             <td><span class="badge">${s.type.toUpperCase()}</span></td>
             <td><b>$${parseFloat(s.total || 0).toFixed(2)}</b></td>
             <td style="color: var(--success); font-weight: bold;">$${parseFloat(s.profit || 0).toFixed(2)}</td>
-            <td>${s.status}</td>
-            <td><button class="btn btn-secondary btn-sm" onclick="reprintSale('${key}')">Ver PDF</button></td>
+            <td style="font-size:0.75rem;">${s.date}</td>
+            <td><button class="btn btn-secondary btn-sm" onclick="reprintSale('${key}')">PDF</button></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 function reprintSale(key) {
-    if (db) {
-        db.ref("sales/" + key).once("value", (snapshot) => {
-            const sale = snapshot.val();
-            if (sale) showModal(sale);
-        });
-    }
+    const sale = allSales[key];
+    if (sale) showModal(sale);
 }
 
-function calculateReports(sales) {
+// ==========================================
+// 8. REPORTES Y GANANCIAS
+// ==========================================
+function setReportTimeFilter(filter) {
+    currentReportTimeFilter = filter;
+    document.querySelectorAll('#tab-reports .filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
+    document.getElementById('btn-rep-' + filter).classList.add('active-time');
+    calculateReports();
+}
+
+function calculateReports() {
     let totalSales = 0;
     let netProfit = 0;
+    const now = new Date();
 
-    Object.keys(sales).forEach(key => {
-        const s = sales[key];
+    Object.keys(allSales).forEach(key => {
+        const s = allSales[key];
+        const saleDate = new Date(s.timestamp || Date.now());
+
+        if (currentReportTimeFilter === 'today' && !isSameDay(now, saleDate)) return;
+        if (currentReportTimeFilter === 'week' && !isSameWeek(now, saleDate)) return;
+        if (currentReportTimeFilter === 'month' && !isSameMonth(now, saleDate)) return;
+
         if (s.status === 'Cobrado' || s.type === 'venta') {
             totalSales += parseFloat(s.total || 0);
             netProfit += parseFloat(s.profit || 0);
@@ -410,38 +564,34 @@ function calculateReports(sales) {
 }
 
 // ==========================================
-// 7. DATOS BANCARIOS E IMPRESIÓN ADAPTADA
+// 9. CONFIGURACIÓN Y MODAL IMPRESIÓN
 // ==========================================
-function saveBankSettings() {
-    const name = document.getElementById('bank-name').value.trim();
-    const holder = document.getElementById('bank-holder').value.trim();
-    const clabe = document.getElementById('bank-clabe').value.trim();
-    const account = document.getElementById('bank-account').value.trim();
+function saveSettings() {
+    const bank = {
+        name: document.getElementById('bank-name').value.trim(),
+        holder: document.getElementById('bank-holder').value.trim(),
+        clabe: document.getElementById('bank-clabe').value.trim(),
+        account: document.getElementById('bank-account').value.trim()
+    };
+    const terms = document.getElementById('terms-text').value.trim();
 
-    if (!db) return;
+    bankSettings = bank;
+    termsSettings = terms;
 
-    db.ref("settings/bank").set({
-        name: name,
-        holder: holder,
-        clabe: clabe,
-        account: account
-    }, (error) => {
-        if (error) {
-            alert("Error al guardar datos bancarios: " + error.message);
-        } else {
-            alert("✅ Datos bancarios guardados con éxito.");
-        }
-    });
+    localStorage.setItem('ferre_bank', JSON.stringify(bank));
+    localStorage.setItem('ferre_terms', terms);
+
+    if (db && navigator.onLine) {
+        db.ref("settings").set({ bank, terms });
+    }
+
+    alert("✅ Configuración guardada correctamente.");
 }
 
 function showModal(sale) {
     const backdrop = document.getElementById('quote-modal-backdrop');
     const container = document.getElementById('quote-modal-content');
     if (!backdrop || !container) return;
-
-    const bankName = document.getElementById('bank-name') ? document.getElementById('bank-name').value : '';
-    const bankHolder = document.getElementById('bank-holder') ? document.getElementById('bank-holder').value : '';
-    const bankClabe = document.getElementById('bank-clabe') ? document.getElementById('bank-clabe').value : '';
 
     let itemsHtml = '';
     sale.items.forEach(item => {
@@ -455,39 +605,48 @@ function showModal(sale) {
         `;
     });
 
-    // SOLO MOSTRAR DATOS BANCARIOS EN COTIZACIONES (OCULTAR EN VENTAS)
     let bankHtml = '';
-    if (sale.type === 'cotizacion' && bankClabe) {
+    if (sale.type === 'cotizacion' && bankSettings.clabe) {
         bankHtml = `
-            <div style="margin-top: 20px; padding: 12px; border: 1px dashed #bbb; border-radius: 6px; background: #fafafa;">
-                <h4 style="margin: 0 0 6px 0; color: #333; font-size: 0.9rem;">Datos para Transferencia / Depósito:</h4>
-                <p style="margin: 2px 0; font-size: 0.85rem;"><b>Banco:</b> ${bankName}</p>
-                <p style="margin: 2px 0; font-size: 0.85rem;"><b>Titular:</b> ${bankHolder}</p>
-                <p style="margin: 2px 0; font-size: 0.85rem;"><b>CLABE:</b> ${bankClabe}</p>
+            <div style="margin-top: 15px; padding: 10px; border: 1px dashed #bbb; border-radius: 6px; background: #fafafa; font-size: 0.85rem;">
+                <h4 style="margin: 0 0 4px 0; color: #333;">Datos para Depósito / Transferencia:</h4>
+                <p style="margin: 2px 0;"><b>Banco:</b> ${bankSettings.name || ''}</p>
+                <p style="margin: 2px 0;"><b>Titular:</b> ${bankSettings.holder || ''}</p>
+                <p style="margin: 2px 0;"><b>CLABE:</b> ${bankSettings.clabe || ''}</p>
+                ${bankSettings.account ? `<p style="margin: 2px 0;"><b>Cuenta/Tarjeta:</b> ${bankSettings.account}</p>` : ''}
+            </div>
+        `;
+    }
+
+    let termsHtml = '';
+    if (termsSettings) {
+        termsHtml = `
+            <div style="margin-top: 15px; font-size: 0.75rem; color: #666; border-top: 1px solid #eee; padding-top: 8px;">
+                <p style="margin: 0;"><b>Términos:</b> ${termsSettings}</p>
             </div>
         `;
     }
 
     container.innerHTML = `
-        <div style="text-align: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 18px;">
-            <h2 style="margin: 0; font-size: 1.6rem; color: #111;">FERRE-POS</h2>
-            <p style="margin: 4px 0 0 0; font-weight: bold; font-size: 1rem; letter-spacing: 1px; color: #444;">
+        <div style="text-align: center; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 15px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: #111;">FERRE-POS</h2>
+            <p style="margin: 2px 0 0 0; font-weight: bold; font-size: 0.95rem; color: #444;">
                 ${sale.type === 'venta' ? 'RECIBO DE VENTA' : 'COTIZACIÓN DE MATERIALES'}
             </p>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 0.9rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.85rem;">
             <div>
-                <p style="margin: 3px 0;"><b>Cliente:</b> ${sale.client}</p>
-                ${sale.expiry && sale.type === 'cotizacion' ? `<p style="margin: 3px 0; color: #c53030;"><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
+                <p style="margin: 2px 0;"><b>Cliente:</b> ${sale.client}</p>
+                ${sale.expiry && sale.type === 'cotizacion' ? `<p style="margin: 2px 0; color: #c53030;"><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
             </div>
             <div style="text-align: right;">
-                <p style="margin: 3px 0;"><b>Folio:</b> ${sale.folio}</p>
-                <p style="margin: 3px 0;"><b>Fecha:</b> ${sale.date}</p>
+                <p style="margin: 2px 0;"><b>Folio:</b> ${sale.folio}</p>
+                <p style="margin: 2px 0;"><b>Fecha:</b> ${sale.date}</p>
             </div>
         </div>
 
-        <table style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.9rem;">
+        <table style="width:100%; border-collapse: collapse; margin-bottom: 12px; font-size: 0.85rem;">
             <thead>
                 <tr style="border-bottom: 2px solid #222; text-align: left;">
                     <th style="padding-bottom: 6px;">Producto</th>
@@ -501,11 +660,12 @@ function showModal(sale) {
             </tbody>
         </table>
 
-        <div style="text-align: right; margin-top: 15px; font-size: 1.1rem;">
-            <p style="margin: 0;"><b>Total a Pagar: <span style="font-size: 1.3rem;">$${parseFloat(sale.total).toFixed(2)}</span> MXN</b></p>
+        <div style="text-align: right; margin-top: 12px; font-size: 1.05rem;">
+            <p style="margin: 0;"><b>Total: <span style="font-size: 1.2rem;">$${parseFloat(sale.total).toFixed(2)}</span> MXN</b></p>
         </div>
 
         ${bankHtml}
+        ${termsHtml}
     `;
 
     backdrop.style.display = 'flex';
@@ -522,7 +682,6 @@ function printDocument() {
     `;
 
     window.print();
-
     document.body.innerHTML = originalContent;
     location.reload();
 }
@@ -531,3 +690,9 @@ function closeModal() {
     const backdrop = document.getElementById('quote-modal-backdrop');
     if (backdrop) backdrop.style.display = 'none';
 }
+
+// Carga Inicial
+renderCatalog();
+renderPOSCatalog();
+renderHistory();
+calculateReports();
