@@ -160,6 +160,52 @@ nav::-webkit-scrollbar {
     font-size: 0.85rem;
 }
 
+/* CUADRÍCULA Y TARJETAS COMPACTAS DE PRODUCTOS EN VENTAS */
+.compact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.prod-card-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.1s, border-color 0.1s;
+}
+
+.prod-card-item:active {
+    transform: scale(0.97);
+    border-color: var(--primary);
+}
+
+.prod-card-title {
+    font-size: 0.78rem;
+    font-weight: bold;
+    color: #1e293b;
+    margin-bottom: 4px;
+    line-height: 1.1;
+}
+
+.prod-card-price {
+    font-size: 0.88rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.prod-card-code {
+    font-size: 0.68rem;
+    color: #64748b;
+}
+
 .search-row-mobile {
     display: flex;
     gap: 8px;
@@ -176,39 +222,16 @@ nav::-webkit-scrollbar {
     }
 }
 
-.qty-control {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: #f1f5f9;
-    padding: 2px 4px;
-    border-radius: 6px;
-}
-
 .qty-btn {
-    width: 28px;
-    height: 28px;
     border: none;
     background: #e2e8f0;
     color: #0f172a;
     font-weight: bold;
-    font-size: 1rem;
     border-radius: 4px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-}
-
-.qty-btn:active {
-    background: #cbd5e1;
-}
-
-.qty-val {
-    min-width: 20px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 0.85rem;
 }
 
 .btn {
