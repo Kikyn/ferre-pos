@@ -73,7 +73,7 @@ function toggleExpiryInput(checked) {
 }
 
 // ==========================================
-// 3. GESTIÓN DEL CATÁLOGO DE PRODUCTOS
+// 3. GESTIÓN DEL CATÁLOGO DE PRODUCTOS (CON EDICIÓN)
 // ==========================================
 function saveProduct() {
     const code = document.getElementById('prod-code').value.trim();
@@ -83,6 +83,7 @@ function saveProduct() {
     const price = parseFloat(document.getElementById('prod-price').value) || 0;
     const trackStock = document.getElementById('prod-track-stock').checked;
     const stock = trackStock ? (parseInt(document.getElementById('prod-stock').value) || 0) : 'N/A';
+    const editingKey = document.getElementById('editing-product-key').value;
 
     if (!code || !name) {
         alert("⚠️ Por favor ingresa el Código SKU y el Nombre del producto.");
@@ -106,17 +107,53 @@ function saveProduct() {
         stock: stock
     };
 
+    // Si se cambió la clave SKU al editar, borrar la antigua
+    if (editingKey && editingKey !== cleanCode) {
+        db.ref("products/" + editingKey).remove();
+    }
+
     db.ref("products/" + cleanCode).set(newProduct, (error) => {
         if (error) {
             alert("Error al guardar: " + error.message);
         } else {
-            alert("✅ Producto guardado correctamente en la nube");
-            document.getElementById('prod-code').value = '';
-            document.getElementById('prod-name').value = '';
-            document.getElementById('prod-cost').value = '';
-            document.getElementById('prod-price').value = '';
+            alert(editingKey ? "✅ Producto actualizado correctamente" : "✅ Producto guardado correctamente en la nube");
+            cancelEditProduct();
         }
     });
+}
+
+function editProduct(key) {
+    const p = allProducts[key];
+    if (!p) return;
+
+    document.getElementById('editing-product-key').value = key;
+    document.getElementById('catalog-form-title').innerText = "✏️ Modificar Producto: " + p.name;
+    document.getElementById('prod-code').value = p.code || '';
+    document.getElementById('prod-name').value = p.name || '';
+    document.getElementById('prod-category').value = p.category || 'general';
+    document.getElementById('prod-cost').value = p.cost || 0;
+    document.getElementById('prod-price').value = p.price || 0;
+    
+    const trackStock = p.trackStock !== false && p.stock !== 'N/A';
+    document.getElementById('prod-track-stock').checked = trackStock;
+    toggleStockField(trackStock);
+    document.getElementById('prod-stock').value = trackStock ? p.stock : 10;
+
+    document.getElementById('btn-save-prod').innerText = "Guardar Cambios ✏️";
+    document.getElementById('btn-cancel-edit').style.display = "inline-block";
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEditProduct() {
+    document.getElementById('editing-product-key').value = '';
+    document.getElementById('catalog-form-title').innerText = "Registrar Nuevo Producto";
+    document.getElementById('prod-code').value = '';
+    document.getElementById('prod-name').value = '';
+    document.getElementById('prod-cost').value = '';
+    document.getElementById('prod-price').value = '';
+    document.getElementById('btn-save-prod').innerText = "Guardar en la Nube ☁️";
+    document.getElementById('btn-cancel-edit').style.display = "none";
 }
 
 function renderCatalog(products) {
@@ -136,7 +173,10 @@ function renderCatalog(products) {
             <td><b>$${parseFloat(p.price || 0).toFixed(2)}</b></td>
             <td style="color: var(--success); font-weight: bold;">$${profit.toFixed(2)}</td>
             <td>${p.stock}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteProduct('${key}')">Eliminar</button></td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editProduct('${key}')">✏️ Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${key}')">Eliminar</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -370,7 +410,7 @@ function calculateReports(sales) {
 }
 
 // ==========================================
-// 7. DATOS BANCARIOS E IMPRESIÓN DIRECTA
+// 7. DATOS BANCARIOS E IMPRESIÓN ADAPTADA
 // ==========================================
 function saveBankSettings() {
     const name = document.getElementById('bank-name').value.trim();
@@ -415,8 +455,9 @@ function showModal(sale) {
         `;
     });
 
+    // SOLO MOSTRAR DATOS BANCARIOS EN COTIZACIONES (OCULTAR EN VENTAS)
     let bankHtml = '';
-    if (bankClabe) {
+    if (sale.type === 'cotizacion' && bankClabe) {
         bankHtml = `
             <div style="margin-top: 20px; padding: 12px; border: 1px dashed #bbb; border-radius: 6px; background: #fafafa;">
                 <h4 style="margin: 0 0 6px 0; color: #333; font-size: 0.9rem;">Datos para Transferencia / Depósito:</h4>
@@ -438,7 +479,7 @@ function showModal(sale) {
         <div style="display: flex; justify-content: space-between; margin-bottom: 18px; font-size: 0.9rem;">
             <div>
                 <p style="margin: 3px 0;"><b>Cliente:</b> ${sale.client}</p>
-                ${sale.expiry ? `<p style="margin: 3px 0; color: #c53030;"><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
+                ${sale.expiry && sale.type === 'cotizacion' ? `<p style="margin: 3px 0; color: #c53030;"><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
             </div>
             <div style="text-align: right;">
                 <p style="margin: 3px 0;"><b>Folio:</b> ${sale.folio}</p>
@@ -470,7 +511,6 @@ function showModal(sale) {
     backdrop.style.display = 'flex';
 }
 
-// IMPRESIÓN REEMPLAZANDO EL DOM SIN VENTANAS EMERGENTES
 function printDocument() {
     const printContent = document.getElementById('quote-modal-content').innerHTML;
     const originalContent = document.body.innerHTML;
@@ -483,7 +523,6 @@ function printDocument() {
 
     window.print();
 
-    // Restaurar la página a su estado original al terminar de imprimir
     document.body.innerHTML = originalContent;
     location.reload();
 }
