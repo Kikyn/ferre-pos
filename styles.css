@@ -26,7 +26,7 @@ body {
 header {
     background-color: var(--bg-dark);
     color: white;
-    padding: 12px 18px;
+    padding: 10px 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -34,15 +34,17 @@ header {
 }
 
 header h1 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+    white-space: nowrap;
 }
 
 #cloud-status {
     background: rgba(255, 255, 255, 0.15);
-    padding: 4px 10px;
-    border-radius: 16px;
-    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 nav {
@@ -53,17 +55,21 @@ nav {
     position: sticky;
     top: 0;
     z-index: 100;
+    scrollbar-width: none;
+}
+
+nav::-webkit-scrollbar {
+    display: none;
 }
 
 .nav-btn {
-    flex: 1;
-    min-width: 80px;
-    padding: 12px 10px;
+    flex: 0 0 auto;
+    padding: 10px 12px;
     border: none;
     background: none;
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #64748b;
     border-bottom: 3px solid transparent;
     white-space: nowrap;
@@ -76,7 +82,7 @@ nav {
 }
 
 .container {
-    padding: 15px;
+    padding: 10px;
     max-width: 1200px;
     margin: 0 auto;
 }
@@ -84,7 +90,7 @@ nav {
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 12px;
 }
 
 @media (max-width: 820px) {
@@ -95,16 +101,16 @@ nav {
 
 .card {
     background: var(--card-bg);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 15px;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .card-title {
     font-weight: bold;
-    font-size: 1rem;
-    margin-bottom: 12px;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
 }
 
 .quote-loader-card {
@@ -116,55 +122,66 @@ nav {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
     border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 15px;
+    padding: 10px;
+    margin-bottom: 12px;
     color: #166534;
 }
 
 .seller-margin-title {
     font-weight: bold;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     margin-bottom: 4px;
 }
 
 .seller-margin-grid {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: bold;
 }
 
 .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .form-group label {
     display: block;
-    font-size: 0.8rem;
-    margin-bottom: 4px;
+    font-size: 0.78rem;
+    margin-bottom: 3px;
     font-weight: 600;
 }
 
 .form-control {
     width: 100%;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .search-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: center;
+}
+
+.search-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.scan-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .btn {
-    padding: 10px 14px;
+    padding: 8px 12px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -176,7 +193,7 @@ nav {
 .btn-danger { background: var(--danger); color: white; }
 .btn-warning { background: var(--warning); color: white; }
 .btn-secondary { background: #e2e8f0; color: #334155; }
-.btn-sm { padding: 6px 10px; font-size: 0.78rem; }
+.btn-sm { padding: 5px 8px; font-size: 0.75rem; }
 
 .table-responsive {
     overflow-x: auto;
@@ -190,43 +207,51 @@ table {
 }
 
 th, td {
-    padding: 10px 8px;
+    padding: 8px 6px;
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    word-break: break-word;
 }
 
 th {
     background: #f8fafc;
+    font-size: 0.75rem;
 }
 
 .badge {
     background: #e0f2fe;
     color: #0369a1;
-    padding: 2px 6px;
+    padding: 2px 5px;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
 }
 
 .total-display {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: bold;
     text-align: right;
-    margin: 12px 0;
+    margin: 10px 0;
 }
 
 .action-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
 }
 
 .categories-bar, .filter-time-bar {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     overflow-x: auto;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     padding-bottom: 4px;
+    scrollbar-width: none;
+}
+
+.categories-bar::-webkit-scrollbar, .filter-time-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .filter-time-bar .btn.active-time {
@@ -237,22 +262,21 @@ th {
 .toggle-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
+    gap: 6px;
+    font-size: 0.8rem;
 }
 
 .metric-val {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: bold;
-    margin: 8px 0;
+    margin: 6px 0;
 }
 
 .metric-sub {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #64748b;
 }
 
-/* MODAL WEB */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -268,9 +292,9 @@ th {
 
 .modal-card {
     background: white;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 650px;
+    padding: 16px;
+    border-radius: 8px;
+    max-width: 600px;
     width: 95%;
     max-height: 90vh;
     overflow-y: auto;
@@ -281,13 +305,13 @@ th {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
     border-bottom: 1px solid #e2e8f0;
 }
 
 .modal-header-title {
     font-weight: bold;
     color: #555;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
