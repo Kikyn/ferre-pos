@@ -22,6 +22,8 @@ let activeScannerTarget = null;
 let currentTimeFilter = 'all';
 let currentReportTimeFilter = 'all';
 let currentCatalogCategoryFilter = 'todos';
+let currentPosCategoryFilter = 'todos';
+let selectedProductForQtyModal = null;
 
 const defaultMargins = {
     electrico: 20,
@@ -102,9 +104,6 @@ function showToast(msg) {
     setTimeout(() => { toast.style.display = 'none'; }, 2000);
 }
 
-// ==========================================
-// 2. ORDENAMIENTO DE PRODUCTOS
-// ==========================================
 function getSortedProducts(productsObj) {
     return Object.keys(productsObj)
         .map(key => ({ key: key, ...productsObj[key] }))
@@ -116,9 +115,6 @@ function getSortedProducts(productsObj) {
         });
 }
 
-// ==========================================
-// 3. NAVEGACIÓN Y PESTAÑAS
-// ==========================================
 function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
     const activeTab = document.getElementById('tab-' + tabName);
@@ -147,8 +143,17 @@ function toggleMobileCart() {
 }
 
 // ==========================================
-// 4. LÓGICA DE PORCENTAJES Y REDONDEO
+// 2. MODAL DE CATÁLOGO (NUEVO / EDITAR)
 // ==========================================
+function openProductModal() {
+    cancelEditProduct();
+    document.getElementById('product-modal-backdrop').style.display = 'flex';
+}
+
+function closeProductModal() {
+    document.getElementById('product-modal-backdrop').style.display = 'none';
+}
+
 function applyDefaultCategoryMargin() {
     const category = document.getElementById('prod-category').value;
     const marginInput = document.getElementById('prod-margin-pct');
@@ -170,19 +175,6 @@ function calculatePriceFromMargin() {
     const roundedPrice = Math.ceil(rawPrice);
     document.getElementById('prod-price').value = roundedPrice;
     showToast("Calculado: $" + roundedPrice + ".00 MXN");
-}
-
-// ==========================================
-// 5. CATÁLOGO Y FILTRO POR CATEGORÍAS
-// ==========================================
-function filterCatalogCategory(category) {
-    currentCatalogCategoryFilter = category;
-    
-    document.querySelectorAll('#tab-catalog .categories-bar .btn').forEach(btn => btn.classList.remove('active-cat'));
-    const activeBtn = document.getElementById('btn-cat-filter-' + category);
-    if (activeBtn) activeBtn.classList.add('active-cat');
-
-    renderCatalog(document.getElementById('catalog-search').value);
 }
 
 function saveProduct() {
@@ -217,7 +209,7 @@ function saveProduct() {
     }
 
     showToast(editingKey ? "✅ Producto actualizado" : "✅ Producto guardado");
-    cancelEditProduct();
+    closeProductModal();
     renderCatalog();
     renderPOSCatalog();
 }
@@ -242,8 +234,7 @@ function editProduct(key) {
     document.getElementById('prod-stock').value = trackStock ? p.stock : 10;
 
     document.getElementById('btn-save-prod').innerText = "Guardar Cambios ✏️";
-    document.getElementById('btn-cancel-edit').style.display = "inline-block";
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('product-modal-backdrop').style.display = 'flex';
 }
 
 function cancelEditProduct() {
@@ -255,8 +246,17 @@ function cancelEditProduct() {
     document.getElementById('prod-cost').value = '';
     document.getElementById('prod-price').value = '';
     applyDefaultCategoryMargin();
-    document.getElementById('btn-save-prod').innerText = "Guardar en la Nube ☁️";
-    document.getElementById('btn-cancel-edit').style.display = "none";
+    document.getElementById('btn-save-prod').innerText = "Guardar ☁️";
+}
+
+function filterCatalogCategory(category) {
+    currentCatalogCategoryFilter = category;
+    
+    document.querySelectorAll('#tab-catalog .categories-bar .btn').forEach(btn => btn.classList.remove('active-cat'));
+    const activeBtn = document.getElementById('btn-cat-filter-' + category);
+    if (activeBtn) activeBtn.classList.add('active-cat');
+
+    renderCatalog(document.getElementById('catalog-search').value);
 }
 
 function renderCatalog(filterQuery = '') {
@@ -313,18 +313,70 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 6. PUNTO DE VENTA Y ESCÁNER DE CÁMARA
+// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD
 // ==========================================
-function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
-    const tbody = document.getElementById('pos-catalog-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+function openQtyModal(key) {
+    const product = allProducts[key];
+    if (!product) return;
+
+    selectedProductForQtyModal = product;
+    document.getElementById('qty-modal-prod-name').innerText = product.name;
+    document.getElementById('qty-modal-prod-price').innerText = '$' + parseFloat(product.price || 0).toFixed(2) + ' MXN';
+    
+    const existingInCart = cart.find(item => item.key === key);
+    document.getElementById('qty-modal-input').value = existingInCart ? existingInCart.qty : 1;
+
+    document.getElementById('qty-modal-backdrop').style.display = 'flex';
+}
+
+function closeQtyModal() {
+    document.getElementById('qty-modal-backdrop').style.display = 'none';
+    selectedProductForQtyModal = null;
+}
+
+function changeQtyModalInput(delta) {
+    const input = document.getElementById('qty-modal-input');
+    let currentVal = parseInt(input.value) || 1;
+    currentVal += delta;
+    if (currentVal < 1) currentVal = 1;
+    input.value = currentVal;
+}
+
+function confirmQtyModalAdd() {
+    if (!selectedProductForQtyModal) return;
+
+    const qty = parseInt(document.getElementById('qty-modal-input').value) || 1;
+    const key = selectedProductForQtyModal.key;
+
+    const existingIndex = cart.findIndex(item => item.key === key);
+    if (existingIndex > -1) {
+        cart[existingIndex].qty = qty;
+    } else {
+        cart.push({
+            key: key,
+            code: selectedProductForQtyModal.code,
+            name: selectedProductForQtyModal.name,
+            cost: parseFloat(selectedProductForQtyModal.cost || 0),
+            price: parseFloat(selectedProductForQtyModal.price || 0),
+            qty: qty
+        });
+    }
+
+    renderCart();
+    closeQtyModal();
+    showToast("🛒 Carrito actualizado");
+}
+
+function renderPOSCatalog(filterQuery = '') {
+    const container = document.getElementById('pos-products-compact-list');
+    if (!container) return;
+    container.innerHTML = '';
 
     const sorted = getSortedProducts(allProducts);
     const q = filterQuery.toLowerCase().trim();
 
     sorted.forEach(p => {
-        if (categoryFilter !== 'todos' && p.category !== categoryFilter) return;
+        if (currentPosCategoryFilter !== 'todos' && p.category !== currentPosCategoryFilter) return;
 
         const itemCode = (p.code || p.sku || '').toLowerCase();
         const itemBarcode = (p.barcode || '').toLowerCase();
@@ -333,51 +385,21 @@ function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
         if (q && !itemCode.includes(q) && !itemBarcode.includes(q) && !itemName.includes(q)) return;
 
         const cartItem = cart.find(ci => ci.key === p.key);
-        const currentQty = cartItem ? cartItem.qty : 0;
+        const qtyBadge = cartItem ? `<span style="background:var(--success); color:white; padding:1px 5px; border-radius:10px; font-size:0.65rem; margin-left:4px;">${cartItem.qty} en carrito</span>` : '';
 
-        const displayIdent = p.barcode ? `<b>${p.barcode}</b><br><small style="color:#64748b;">${p.code}</small>` : `<b>${p.code}</b>`;
+        const card = document.createElement('div');
+        card.className = 'prod-card-item';
+        card.onclick = () => openQtyModal(p.key);
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${displayIdent}</td>
-            <td>${p.name}</td>
-            <td><b>$${parseFloat(p.price || 0).toFixed(2)}</b></td>
-            <td>
-                <div class="qty-control">
-                    <button class="qty-btn" onclick="adjustProductQty('${p.key}', -1)">-</button>
-                    <span class="qty-val">${currentQty}</span>
-                    <button class="qty-btn" onclick="adjustProductQty('${p.key}', 1)">+</button>
-                </div>
-            </td>
+        card.innerHTML = `
+            <div>
+                <div class="prod-card-title">${p.name} ${qtyBadge}</div>
+                <div class="prod-card-code">${p.barcode ? '📷 ' + p.barcode : p.code}</div>
+            </div>
+            <div class="prod-card-price">$${parseFloat(p.price || 0).toFixed(2)}</div>
         `;
-        tbody.appendChild(tr);
+        container.appendChild(card);
     });
-}
-
-function adjustProductQty(key, change) {
-    const product = allProducts[key];
-    if (!product) return;
-
-    const existingIndex = cart.findIndex(item => item.key === key);
-
-    if (existingIndex > -1) {
-        cart[existingIndex].qty += change;
-        if (cart[existingIndex].qty <= 0) {
-            cart.splice(existingIndex, 1);
-        }
-    } else if (change > 0) {
-        cart.push({
-            key: key,
-            code: product.code,
-            name: product.name,
-            cost: parseFloat(product.cost || 0),
-            price: parseFloat(product.price || 0),
-            qty: 1
-        });
-    }
-
-    renderCart();
-    renderPOSCatalog(document.getElementById('pos-search').value);
 }
 
 function searchProduct(query) {
@@ -385,7 +407,13 @@ function searchProduct(query) {
 }
 
 function filterCategory(cat) {
-    renderPOSCatalog(document.getElementById('pos-search').value, cat);
+    currentPosCategoryFilter = cat;
+    
+    document.querySelectorAll('#tab-pos .categories-bar .btn').forEach(btn => btn.classList.remove('active-cat'));
+    const activeBtn = document.getElementById('btn-pos-cat-' + cat);
+    if (activeBtn) activeBtn.classList.add('active-cat');
+
+    renderPOSCatalog(document.getElementById('pos-search').value);
 }
 
 function toggleCameraScanner(target) {
@@ -427,8 +455,7 @@ function toggleCameraScanner(target) {
                     });
 
                     if (matchedKey) {
-                        adjustProductQty(matchedKey, 1);
-                        showToast("➕ " + allProducts[matchedKey].name + " agregado");
+                        openQtyModal(matchedKey);
                     } else {
                         document.getElementById('pos-search').value = cleanScannedCode;
                         searchProduct(cleanScannedCode);
@@ -543,7 +570,7 @@ function renderCart() {
 }
 
 // ==========================================
-// 7. GENERAR FOLIOS Y REGISTRO
+// 4. HISTORIAL Y REPORTES
 // ==========================================
 function generateNextFolio(type) {
     const prefix = type === 'venta' ? 'VEN-' : 'COT-';
@@ -610,9 +637,6 @@ function generateQuote(type) {
     document.getElementById('client-name').value = '';
 }
 
-// ==========================================
-// 8. HISTORIAL
-// ==========================================
 function parseSaleDate(s) {
     if (s.timestamp) return new Date(s.timestamp);
     if (s.date) {
@@ -682,9 +706,6 @@ function reprintSale(key) {
     if (sale) showModal(sale);
 }
 
-// ==========================================
-// 9. REPORTES Y GANANCIAS
-// ==========================================
 function setReportTimeFilter(filter) {
     currentReportTimeFilter = filter;
     document.querySelectorAll('#tab-reports .filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
@@ -722,9 +743,6 @@ function calculateReports() {
     }
 }
 
-// ==========================================
-// 10. CONFIGURACIÓN Y MODAL IMPRESIÓN
-// ==========================================
 function saveSettings() {
     const bank = {
         name: document.getElementById('bank-name').value.trim(),
