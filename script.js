@@ -18,11 +18,10 @@ let termsSettings = localStorage.getItem('ferre_terms') || "Precios sujetos a ca
 
 let cart = [];
 let html5QrCode = null;
-let activeScannerTarget = null; // 'pos' o 'catalog'
-let currentTimeFilter = 'today';
-let currentReportTimeFilter = 'today';
+let activeScannerTarget = null;
+let currentTimeFilter = 'all'; // Inicializado en 'all' para mostrar todos por defecto
+let currentReportTimeFilter = 'all';
 
-// Sincronización Online / Offline
 function updateOnlineStatus() {
     const statusElem = document.getElementById("cloud-status");
     if (navigator.onLine) {
@@ -125,7 +124,7 @@ function toggleExpiryInput(checked) {
 }
 
 // ==========================================
-// 4. CATÁLOGO CON SKU Y CÓDIGO DE BARRAS SEPARADOS
+// 4. CATÁLOGO CON SKU Y CÓDIGO DE BARRAS
 // ==========================================
 function saveProduct() {
     const sku = document.getElementById('prod-sku').value.trim();
@@ -169,7 +168,7 @@ function editProduct(key) {
     if (!p) return;
 
     document.getElementById('editing-product-key').value = key;
-    document.getElementById('catalog-form-title').innerText = "✏️ Modificar Producto: " + p.name;
+    document.getElementById('catalog-form-title').innerText = "✏️ Modificar: " + p.name;
     document.getElementById('prod-sku').value = p.sku || p.code || '';
     document.getElementById('prod-barcode').value = p.barcode || '';
     document.getElementById('prod-name').value = p.name || '';
@@ -217,7 +216,7 @@ function renderCatalog(filterQuery = '') {
         const profit = (p.price || 0) - (p.cost || 0);
         const tr = document.createElement('tr');
         
-        const displayCode = p.barcode ? `<b>${p.sku || p.code}</b><br><small style="color:#666;">📷 ${p.barcode}</small>` : `<b>${p.sku || p.code}</b>`;
+        const displayCode = p.barcode ? `<b>${p.sku || p.code}</b><br><small style="color:#2563eb;">📷 ${p.barcode}</small>` : `<b>${p.sku || p.code}</b>`;
 
         tr.innerHTML = `
             <td>${displayCode}</td>
@@ -251,7 +250,7 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 5. PUNTO DE VENTA Y ESCÁNER MÚLTIPLE (POS/CATÁLOGO)
+// 5. PUNTO DE VENTA Y BÚSQUEDA POR CÓDIGO DE BARRAS
 // ==========================================
 function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
     const tbody = document.getElementById('pos-catalog-body');
@@ -270,11 +269,11 @@ function renderPOSCatalog(filterQuery = '', categoryFilter = 'todos') {
 
         if (q && !itemSku.includes(q) && !itemBarcode.includes(q) && !itemName.includes(q)) return;
 
-        const displayCode = p.barcode ? `${p.sku || p.code} / ${p.barcode}` : `${p.sku || p.code}`;
+        const displayIdent = p.barcode ? `<b>${p.barcode}</b><br><small style="color:#64748b;">SKU: ${p.sku || p.code}</small>` : `<b>${p.sku || p.code}</b>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><small>${displayCode}</small></td>
+            <td>${displayIdent}</td>
             <td>${p.name}</td>
             <td><b>$${parseFloat(p.price || 0).toFixed(2)}</b></td>
             <td><button class="btn btn-primary btn-sm" onclick="addToCart('${p.key}')">Agregar 🛒</button></td>
@@ -312,7 +311,6 @@ function addToCart(key) {
     renderCart();
 }
 
-// Lector por cámara reutilizable (POS o Catálogo)
 function toggleCameraScanner(target) {
     activeScannerTarget = target;
     const containerId = target === 'pos' ? 'camera-scanner-container-pos' : 'camera-scanner-container-catalog';
@@ -324,7 +322,7 @@ function toggleCameraScanner(target) {
         html5QrCode = new Html5Qrcode(readerId);
         html5QrCode.start(
             { facingMode: "environment" },
-            { fps: 10, qrbox: 250 },
+            { fps: 10, qrbox: 220 },
             (decodedText) => {
                 if (activeScannerTarget === 'catalog') {
                     document.getElementById('prod-barcode').value = decodedText;
@@ -332,11 +330,10 @@ function toggleCameraScanner(target) {
                     document.getElementById('pos-search').value = decodedText;
                     searchProduct(decodedText);
                     
-                    // Buscar coincidencia exacta por Barcode o SKU
                     const matchedKey = Object.keys(allProducts).find(k => {
                         const p = allProducts[k];
-                        return (p.barcode && p.barcode.toLowerCase() === decodedText.toLowerCase()) ||
-                               ((p.sku || p.code).toLowerCase() === decodedText.toLowerCase());
+                        return (p.barcode && p.barcode.trim().toLowerCase() === decodedText.trim().toLowerCase()) ||
+                               ((p.sku || p.code).trim().toLowerCase() === decodedText.trim().toLowerCase());
                     });
 
                     if (matchedKey) {
@@ -368,7 +365,6 @@ function hideScannerContainers() {
     document.getElementById('camera-scanner-container-catalog').style.display = 'none';
 }
 
-// Cargador de Cotización previa a Venta
 function loadQuoteToCart() {
     const folioInput = document.getElementById('load-quote-folio').value.trim().toUpperCase();
     if (!folioInput) {
@@ -418,7 +414,7 @@ function renderCart() {
         tr.innerHTML = `
             <td>${item.name}</td>
             <td>
-                <input type="number" value="${item.qty}" min="1" style="width: 45px;" onchange="updateCartQty(${index}, this.value)">
+                <input type="number" value="${item.qty}" min="1" style="width: 40px;" onchange="updateCartQty(${index}, this.value)">
             </td>
             <td>$${item.price.toFixed(2)}</td>
             <td><b>$${itemTotal.toFixed(2)}</b></td>
@@ -437,7 +433,7 @@ function renderCart() {
 }
 
 // ==========================================
-// 6. GENERAR FOLIOS CONSECUTIVOS (`COT-00001` Y `VEN-00001`)
+// 6. GENERAR FOLIOS CONSECUTIVOS
 // ==========================================
 function generateNextFolio(type) {
     const prefix = type === 'venta' ? 'VEN-' : 'COT-';
@@ -504,8 +500,17 @@ function generateQuote(type) {
 }
 
 // ==========================================
-// 7. HISTORIAL CON FILTROS POR FECHAS (HOY / SEMANA / MES)
+// 7. HISTORIAL CORREGIDO (PARSE DE FECHAS)
 // ==========================================
+function parseSaleDate(s) {
+    if (s.timestamp) return new Date(s.timestamp);
+    if (s.date) {
+        const parsed = Date.parse(s.date);
+        if (!isNaN(parsed)) return new Date(parsed);
+    }
+    return null;
+}
+
 function isSameDay(d1, d2) {
     return d1.getFullYear() === d2.getFullYear() &&
            d1.getMonth() === d2.getMonth() &&
@@ -524,7 +529,7 @@ function isSameMonth(d1, d2) {
 
 function setTimeFilter(filter) {
     currentTimeFilter = filter;
-    document.querySelectorAll('.filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
+    document.querySelectorAll('#tab-history .filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
     document.getElementById('btn-time-' + filter).classList.add('active-time');
     renderHistory();
 }
@@ -539,198 +544,8 @@ function renderHistory() {
 
     sortedKeys.forEach(key => {
         const s = allSales[key];
-        const saleDate = new Date(s.timestamp || Date.now());
+        const saleDate = parseSaleDate(s);
 
-        if (currentTimeFilter === 'today' && !isSameDay(now, saleDate)) return;
-        if (currentTimeFilter === 'week' && !isSameWeek(now, saleDate)) return;
-        if (currentTimeFilter === 'month' && !isSameMonth(now, saleDate)) return;
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><b>${s.folio}</b></td>
-            <td>${s.client}</td>
-            <td><span class="badge">${s.type.toUpperCase()}</span></td>
-            <td><b>$${parseFloat(s.total || 0).toFixed(2)}</b></td>
-            <td style="color: var(--success); font-weight: bold;">$${parseFloat(s.profit || 0).toFixed(2)}</td>
-            <td style="font-size:0.75rem;">${s.date}</td>
-            <td><button class="btn btn-secondary btn-sm" onclick="reprintSale('${key}')">PDF</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function reprintSale(key) {
-    const sale = allSales[key];
-    if (sale) showModal(sale);
-}
-
-// ==========================================
-// 8. REPORTES Y GANANCIAS
-// ==========================================
-function setReportTimeFilter(filter) {
-    currentReportTimeFilter = filter;
-    document.querySelectorAll('#tab-reports .filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
-    document.getElementById('btn-rep-' + filter).classList.add('active-time');
-    calculateReports();
-}
-
-function calculateReports() {
-    let totalSales = 0;
-    let netProfit = 0;
-    const now = new Date();
-
-    Object.keys(allSales).forEach(key => {
-        const s = allSales[key];
-        const saleDate = new Date(s.timestamp || Date.now());
-
-        if (currentReportTimeFilter === 'today' && !isSameDay(now, saleDate)) return;
-        if (currentReportTimeFilter === 'week' && !isSameWeek(now, saleDate)) return;
-        if (currentReportTimeFilter === 'month' && !isSameMonth(now, saleDate)) return;
-
-        if (s.status === 'Cobrado' || s.type === 'venta') {
-            totalSales += parseFloat(s.total || 0);
-            netProfit += parseFloat(s.profit || 0);
-        }
-    });
-
-    if (document.getElementById('rep-total-sales')) {
-        document.getElementById('rep-total-sales').innerText = '$' + totalSales.toFixed(2);
-    }
-    if (document.getElementById('rep-net-profit')) {
-        document.getElementById('rep-net-profit').innerText = '$' + netProfit.toFixed(2);
-    }
-}
-
-// ==========================================
-// 9. CONFIGURACIÓN Y MODAL IMPRESIÓN
-// ==========================================
-function saveSettings() {
-    const bank = {
-        name: document.getElementById('bank-name').value.trim(),
-        holder: document.getElementById('bank-holder').value.trim(),
-        clabe: document.getElementById('bank-clabe').value.trim(),
-        account: document.getElementById('bank-account').value.trim()
-    };
-    const terms = document.getElementById('terms-text').value.trim();
-
-    bankSettings = bank;
-    termsSettings = terms;
-
-    localStorage.setItem('ferre_bank', JSON.stringify(bank));
-    localStorage.setItem('ferre_terms', terms);
-
-    if (db && navigator.onLine) {
-        db.ref("settings").set({ bank, terms });
-    }
-
-    alert("✅ Configuración guardada correctamente.");
-}
-
-function showModal(sale) {
-    const backdrop = document.getElementById('quote-modal-backdrop');
-    const container = document.getElementById('quote-modal-content');
-    if (!backdrop || !container) return;
-
-    let itemsHtml = '';
-    sale.items.forEach(item => {
-        itemsHtml += `
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px 0;">${item.name}</td>
-                <td style="text-align: center; padding: 8px 0;">${item.qty}</td>
-                <td style="text-align: right; padding: 8px 0;">$${item.price.toFixed(2)}</td>
-                <td style="text-align: right; padding: 8px 0;">$${(item.price * item.qty).toFixed(2)}</td>
-            </tr>
-        `;
-    });
-
-    let bankHtml = '';
-    if (sale.type === 'cotizacion' && bankSettings.clabe) {
-        bankHtml = `
-            <div style="margin-top: 15px; padding: 10px; border: 1px dashed #bbb; border-radius: 6px; background: #fafafa; font-size: 0.85rem;">
-                <h4 style="margin: 0 0 4px 0; color: #333;">Datos para Depósito / Transferencia:</h4>
-                <p style="margin: 2px 0;"><b>Banco:</b> ${bankSettings.name || ''}</p>
-                <p style="margin: 2px 0;"><b>Titular:</b> ${bankSettings.holder || ''}</p>
-                <p style="margin: 2px 0;"><b>CLABE:</b> ${bankSettings.clabe || ''}</p>
-                ${bankSettings.account ? `<p style="margin: 2px 0;"><b>Cuenta/Tarjeta:</b> ${bankSettings.account}</p>` : ''}
-            </div>
-        `;
-    }
-
-    let termsHtml = '';
-    if (termsSettings) {
-        termsHtml = `
-            <div style="margin-top: 15px; font-size: 0.75rem; color: #666; border-top: 1px solid #eee; padding-top: 8px;">
-                <p style="margin: 0;"><b>Términos:</b> ${termsSettings}</p>
-            </div>
-        `;
-    }
-
-    container.innerHTML = `
-        <div style="text-align: center; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 15px;">
-            <h2 style="margin: 0; font-size: 1.5rem; color: #111;">FERRE-POS</h2>
-            <p style="margin: 2px 0 0 0; font-weight: bold; font-size: 0.95rem; color: #444;">
-                ${sale.type === 'venta' ? 'RECIBO DE VENTA' : 'COTIZACIÓN DE MATERIALES'}
-            </p>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.85rem;">
-            <div>
-                <p style="margin: 2px 0;"><b>Cliente:</b> ${sale.client}</p>
-                ${sale.expiry && sale.type === 'cotizacion' ? `<p style="margin: 2px 0; color: #c53030;"><b>Vigencia:</b> ${sale.expiry}</p>` : ''}
-            </div>
-            <div style="text-align: right;">
-                <p style="margin: 2px 0;"><b>Folio:</b> ${sale.folio}</p>
-                <p style="margin: 2px 0;"><b>Fecha:</b> ${sale.date}</p>
-            </div>
-        </div>
-
-        <table style="width:100%; border-collapse: collapse; margin-bottom: 12px; font-size: 0.85rem;">
-            <thead>
-                <tr style="border-bottom: 2px solid #222; text-align: left;">
-                    <th style="padding-bottom: 6px;">Producto</th>
-                    <th style="text-align: center; padding-bottom: 6px;">Cant.</th>
-                    <th style="text-align: right; padding-bottom: 6px;">Precio U.</th>
-                    <th style="text-align: right; padding-bottom: 6px;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${itemsHtml}
-            </tbody>
-        </table>
-
-        <div style="text-align: right; margin-top: 12px; font-size: 1.05rem;">
-            <p style="margin: 0;"><b>Total: <span style="font-size: 1.2rem;">$${parseFloat(sale.total).toFixed(2)}</span> MXN</b></p>
-        </div>
-
-        ${bankHtml}
-        ${termsHtml}
-    `;
-
-    backdrop.style.display = 'flex';
-}
-
-function printDocument() {
-    const printContent = document.getElementById('quote-modal-content').innerHTML;
-    const originalContent = document.body.innerHTML;
-
-    document.body.innerHTML = `
-        <div style="width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-            ${printContent}
-        </div>
-    `;
-
-    window.print();
-    document.body.innerHTML = originalContent;
-    location.reload();
-}
-
-function closeModal() {
-    const backdrop = document.getElementById('quote-modal-backdrop');
-    if (backdrop) backdrop.style.display = 'none';
-}
-
-// Carga Inicial
-renderCatalog();
-renderPOSCatalog();
-renderHistory();
-calculateReports();
+        if (currentTimeFilter !== 'all') {
+            if (!saleDate) return;
+            if (currentTimeFilter === 'today' && !isSameDay(now, saleD
