@@ -6,10 +6,8 @@
     <title>FERRE-POS | Cotizaciones y Ventas</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <!-- Lector de Código de Barras por Cámara (Html5Qrcode) -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -30,15 +28,14 @@
 
     <div class="container">
         
-        <!-- PESTAÑA 1: VENTAS Y COTIZACIONES -->
+        <!-- PESTAÑA 1: VENTAS -->
         <div id="tab-pos" class="tab-content active">
             
-            <!-- BUSCADOR RÁPIDO DE COTIZACIONES -->
             <div class="card quote-loader-card">
                 <div class="card-title">🔎 Cargar Cotización Previa para Venta</div>
                 <div class="search-row">
                     <input type="text" id="load-quote-folio" class="form-control" placeholder="Ej. COT-00001">
-                    <button class="btn btn-primary" onclick="loadQuoteToCart()">Cargar a Carrito 🛒</button>
+                    <button class="btn btn-primary" onclick="loadQuoteToCart()">Cargar 🛒</button>
                 </div>
             </div>
 
@@ -46,14 +43,14 @@
                 <div>
                     <div class="card">
                         <div class="card-title">Buscar o Escanear Productos</div>
+                        
                         <div class="search-row" style="margin-bottom: 10px;">
-                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe Código, SKU o Nombre..." oninput="searchProduct(this.value)">
-                            <button class="btn btn-warning" onclick="toggleCameraScanner('pos')">📷 Escanear</button>
+                            <input type="text" id="pos-search" class="form-control" placeholder="Escribe Código de Barras, SKU o Nombre..." oninput="searchProduct(this.value)">
+                            <button class="btn btn-warning scan-btn" onclick="toggleCameraScanner('pos')">📷 Scan</button>
                         </div>
 
-                        <!-- CÁMARA ESCÁNER POS -->
                         <div id="camera-scanner-container-pos" style="display: none; margin-bottom: 15px;">
-                            <div id="reader-pos" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                            <div id="reader-pos" style="width: 100%; max-width: 320px; margin: 0 auto;"></div>
                             <button class="btn btn-danger btn-sm" style="margin-top: 5px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
                         </div>
 
@@ -68,7 +65,7 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Código/SKU</th>
+                                        <th>Identificador</th>
                                         <th>Producto</th>
                                         <th>Precio</th>
                                         <th>Acción</th>
@@ -148,17 +145,16 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Código de Barras (Opcional)</label>
+                        <label>Código de Barras (Escanear / Opcional)</label>
                         <div class="search-row">
                             <input type="text" id="prod-barcode" class="form-control" placeholder="Ej. 750123456789">
-                            <button class="btn btn-warning" type="button" onclick="toggleCameraScanner('catalog')">📷 Scan</button>
+                            <button class="btn btn-warning scan-btn" type="button" onclick="toggleCameraScanner('catalog')">📷 Scan</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- CÁMARA ESCÁNER CATÁLOGO -->
                 <div id="camera-scanner-container-catalog" style="display: none; margin-bottom: 15px;">
-                    <div id="reader-catalog" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                    <div id="reader-catalog" style="width: 100%; max-width: 320px; margin: 0 auto;"></div>
                     <button class="btn btn-danger btn-sm" style="margin-top: 5px; width: 100%;" onclick="stopCameraScanner()">Cerrar Cámara</button>
                 </div>
 
@@ -205,7 +201,7 @@
             <div class="card">
                 <div class="card-title">Catálogo Sincronizado</div>
                 <div class="search-box" style="margin-bottom: 12px;">
-                    <input type="text" id="catalog-search" class="form-control" placeholder="🔎 Buscar por SKU, Código de Barras o Nombre..." oninput="filterCatalogTable(this.value)">
+                    <input type="text" id="catalog-search" class="form-control" placeholder="🔎 Buscar por SKU, Cod. Barras o Nombre..." oninput="filterCatalogTable(this.value)">
                 </div>
                 <div class="table-responsive">
                     <table>
@@ -232,12 +228,11 @@
             <div class="card">
                 <div class="card-title">Historial de Documentos</div>
                 
-                <!-- FILTROS DE FECHAS -->
                 <div class="filter-time-bar">
-                    <button class="btn btn-secondary btn-sm active-time" id="btn-time-today" onclick="setTimeFilter('today')">Hoy</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-time-today" onclick="setTimeFilter('today')">Hoy</button>
                     <button class="btn btn-secondary btn-sm" id="btn-time-week" onclick="setTimeFilter('week')">Esta Semana</button>
                     <button class="btn btn-secondary btn-sm" id="btn-time-month" onclick="setTimeFilter('month')">Este Mes</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-time-all" onclick="setTimeFilter('all')">Todos</button>
+                    <button class="btn btn-secondary btn-sm active-time" id="btn-time-all" onclick="setTimeFilter('all')">Todos</button>
                 </div>
 
                 <div class="table-responsive">
@@ -248,7 +243,6 @@
                                 <th>Cliente</th>
                                 <th>Tipo</th>
                                 <th>Total</th>
-                                <th>Ganancia</th>
                                 <th>Fecha</th>
                                 <th>Acción</th>
                             </tr>
@@ -264,10 +258,10 @@
             <div class="card">
                 <div class="card-title">Período de Evaluación</div>
                 <div class="filter-time-bar">
-                    <button class="btn btn-secondary btn-sm active-time" id="btn-rep-today" onclick="setReportTimeFilter('today')">Hoy</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-rep-today" onclick="setReportTimeFilter('today')">Hoy</button>
                     <button class="btn btn-secondary btn-sm" id="btn-rep-week" onclick="setReportTimeFilter('week')">Esta Semana</button>
                     <button class="btn btn-secondary btn-sm" id="btn-rep-month" onclick="setReportTimeFilter('month')">Este Mes</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-rep-all" onclick="setReportTimeFilter('all')">Todos</button>
+                    <button class="btn btn-secondary btn-sm active-time" id="btn-rep-all" onclick="setReportTimeFilter('all')">Todos</button>
                 </div>
             </div>
 
@@ -285,7 +279,7 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 5: CONFIGURACIÓN -->
+        <!-- PESTAÑA 5: AJUSTES -->
         <div id="tab-settings" class="tab-content" style="display:none;">
             <div class="card">
                 <div class="card-title">Datos Bancarios para Cotizaciones</div>
