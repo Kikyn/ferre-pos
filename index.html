@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link rel="stylesheet" href="styles.css?v=4.0">
+    <link rel="stylesheet" href="styles.css?v=4.1">
 </head>
 <body>
 
@@ -88,9 +88,9 @@
                             <input type="text" id="client-name" class="form-control" placeholder="Cliente General / Público">
                         </div>
 
-                        <div class="toggle-container">
+                        <div class="toggle-container" style="margin-bottom: 8px;">
                             <input type="checkbox" id="enable-expiry" onchange="toggleExpiryInput(this.checked)">
-                            <label for="enable-expiry">Incluir Vigencia (Cotizaciones)</label>
+                            <label for="enable-expiry" style="display:inline; font-weight:normal; font-size:0.8rem;">Incluir Vigencia (Cotizaciones)</label>
                         </div>
 
                         <div class="form-group" id="expiry-container" style="display: none; margin-top: 8px;">
@@ -322,7 +322,7 @@
                     <div class="form-group">
                         <div class="toggle-container" style="margin-top: 20px;">
                             <input type="checkbox" id="prod-track-stock" checked onchange="toggleStockField(this.checked)">
-                            <label for="prod-track-stock">Controlar Cantidad en Stock</label>
+                            <label for="prod-track-stock" style="display:inline; font-weight:normal; font-size:0.8rem;">Controlar Cantidad en Stock</label>
                         </div>
                     </div>
                     <div class="form-group" id="stock-field-container">
@@ -376,7 +376,7 @@
 
     <div id="toast-msg" class="toast-msg"></div>
 
-    <script src="script.js?v=4.0"></script>
+    <script src="script.js?v=4.1"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration Failed', err));
