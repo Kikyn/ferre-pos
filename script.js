@@ -11,10 +11,20 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 
 const db = (typeof firebase !== 'undefined') ? firebase.database() : null;
 
-let allProducts = JSON.parse(localStorage.getItem('ferre_products')) || {};
-let allSales = JSON.parse(localStorage.getItem('ferre_sales')) || {};
-let bankSettings = JSON.parse(localStorage.getItem('ferre_bank')) || {};
-let termsSettings = localStorage.getItem('ferre_terms') || "Precios sujetos a cambio sin previo aviso.";
+let allProducts = {};
+let allSales = {};
+let bankSettings = {};
+let termsSettings = "Precios sujetos a cambio sin previo aviso.";
+
+try {
+    allProducts = JSON.parse(localStorage.getItem('ferre_products')) || {};
+    allSales = JSON.parse(localStorage.getItem('ferre_sales')) || {};
+    bankSettings = JSON.parse(localStorage.getItem('ferre_bank')) || {};
+    termsSettings = localStorage.getItem('ferre_terms') || "Precios sujetos a cambio sin previo aviso.";
+} catch (e) {
+    console.error("Error al leer localStorage:", e);
+    localStorage.clear();
+}
 
 let cart = [];
 let html5QrCode = null;
@@ -147,11 +157,13 @@ function toggleMobileCart() {
 // ==========================================
 function openProductModal() {
     cancelEditProduct();
-    document.getElementById('product-modal-backdrop').style.display = 'flex';
+    const backdrop = document.getElementById('product-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'flex';
 }
 
 function closeProductModal() {
-    document.getElementById('product-modal-backdrop').style.display = 'none';
+    const backdrop = document.getElementById('product-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'none';
 }
 
 function applyDefaultCategoryMargin() {
@@ -234,7 +246,8 @@ function editProduct(key) {
     document.getElementById('prod-stock').value = trackStock ? p.stock : 10;
 
     document.getElementById('btn-save-prod').innerText = "Guardar Cambios ✏️";
-    document.getElementById('product-modal-backdrop').style.display = 'flex';
+    const backdrop = document.getElementById('product-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'flex';
 }
 
 function cancelEditProduct() {
@@ -326,11 +339,13 @@ function openQtyModal(key) {
     const existingInCart = cart.find(item => item.key === key);
     document.getElementById('qty-modal-input').value = existingInCart ? existingInCart.qty : 1;
 
-    document.getElementById('qty-modal-backdrop').style.display = 'flex';
+    const backdrop = document.getElementById('qty-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'flex';
 }
 
 function closeQtyModal() {
-    document.getElementById('qty-modal-backdrop').style.display = 'none';
+    const backdrop = document.getElementById('qty-modal-backdrop');
+    if (backdrop) backdrop.style.display = 'none';
     selectedProductForQtyModal = null;
 }
 
@@ -665,7 +680,8 @@ function isSameMonth(d1, d2) {
 function setTimeFilter(filter) {
     currentTimeFilter = filter;
     document.querySelectorAll('#tab-history .filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
-    document.getElementById('btn-time-' + filter).classList.add('active-time');
+    const btnElem = document.getElementById('btn-time-' + filter);
+    if (btnElem) btnElem.classList.add('active-time');
     renderHistory();
 }
 
@@ -709,7 +725,8 @@ function reprintSale(key) {
 function setReportTimeFilter(filter) {
     currentReportTimeFilter = filter;
     document.querySelectorAll('#tab-reports .filter-time-bar .btn').forEach(b => b.classList.remove('active-time'));
-    document.getElementById('btn-rep-' + filter).classList.add('active-time');
+    const btnElem = document.getElementById('btn-rep-' + filter);
+    if (btnElem) btnElem.classList.add('active-time');
     calculateReports();
 }
 
