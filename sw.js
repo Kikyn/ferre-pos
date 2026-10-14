@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ferre-pos-v2';
+const CACHE_NAME = 'ferre-pos-v4';
 const ASSETS = [
     './',
     './index.html',
