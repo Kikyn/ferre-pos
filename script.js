@@ -35,6 +35,10 @@ let currentCatalogCategoryFilter = 'todos';
 let currentPosCategoryFilter = 'todos';
 let selectedProductForQtyModal = null;
 
+// Variables de Paginación para el POS
+let currentPOSPage = 1;
+const itemsPerPage = 12;
+
 const defaultMargins = {
     electrico: 20,
     ferreteria: 27,
@@ -326,7 +330,7 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD
+// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD (CON PAGINACIÓN)
 // ==========================================
 function openQtyModal(key) {
     const product = allProducts[key];
@@ -390,15 +394,25 @@ function renderPOSCatalog(filterQuery = '') {
     const sorted = getSortedProducts(allProducts);
     const q = filterQuery.toLowerCase().trim();
 
-    sorted.forEach(p => {
-        if (currentPosCategoryFilter !== 'todos' && p.category !== currentPosCategoryFilter) return;
+    // Filtrar según categoría y búsqueda
+    const filtered = sorted.filter(p => {
+        if (currentPosCategoryFilter !== 'todos' && p.category !== currentPosCategoryFilter) return false;
 
         const itemCode = (p.code || p.sku || '').toLowerCase();
         const itemBarcode = (p.barcode || '').toLowerCase();
         const itemName = (p.name || '').toLowerCase();
 
-        if (q && !itemCode.includes(q) && !itemBarcode.includes(q) && !itemName.includes(q)) return;
+        if (q && !itemCode.includes(q) && !itemBarcode.includes(q) && !itemName.includes(q)) return false;
+        return true;
+    });
 
+    // Control de paginación
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+    if (currentPOSPage > totalPages) currentPOSPage = 1;
+    const start = (currentPOSPage - 1) * itemsPerPage;
+    const paginatedItems = filtered.slice(start, start + itemsPerPage);
+
+    paginatedItems.forEach(p => {
         const cartItem = cart.find(ci => ci.key === p.key);
         const qtyBadge = cartItem ? `<span style="background:var(--success); color:white; padding:1px 5px; border-radius:10px; font-size:0.65rem; margin-left:4px;">${cartItem.qty} en carrito</span>` : '';
 
@@ -415,14 +429,37 @@ function renderPOSCatalog(filterQuery = '') {
         `;
         container.appendChild(card);
     });
+
+    renderPOSPagination(totalPages);
+}
+
+function renderPOSPagination(totalPages) {
+    const pagContainer = document.getElementById('pos-pagination-controls');
+    if (!pagContainer) return;
+    pagContainer.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    pagContainer.innerHTML = `
+        <button class="btn btn-secondary btn-sm" onclick="changePOSPage(-1)" ${currentPOSPage === 1 ? 'disabled' : ''}>◀ Ant</button>
+        <span style="font-size:0.8rem; font-weight:bold; color:#475569;">Pág. ${currentPOSPage} de ${totalPages}</span>
+        <button class="btn btn-secondary btn-sm" onclick="changePOSPage(1)" ${currentPOSPage === totalPages ? 'disabled' : ''}>Sig ▶</button>
+    `;
+}
+
+function changePOSPage(delta) {
+    currentPOSPage += delta;
+    renderPOSCatalog(document.getElementById('pos-search').value);
 }
 
 function searchProduct(query) {
+    currentPOSPage = 1; // Reiniciar a página 1 al buscar
     renderPOSCatalog(query);
 }
 
 function filterCategory(cat) {
     currentPosCategoryFilter = cat;
+    currentPOSPage = 1; // Reiniciar a página 1 al cambiar de categoría
     
     document.querySelectorAll('#tab-pos .categories-bar .btn').forEach(btn => btn.classList.remove('active-cat'));
     const activeBtn = document.getElementById('btn-pos-cat-' + cat);
