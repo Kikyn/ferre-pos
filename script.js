@@ -33,7 +33,7 @@ let currentTimeFilter = 'all';
 let currentReportTimeFilter = 'all';
 let currentCatalogCategoryFilter = 'todos';
 let currentPosCategoryFilter = 'todos';
-let selectedProductForQtyModal = null;
+let selectedProductKeyForQtyModal = null;
 
 // Variables de Paginación para el POS
 let currentPOSPage = 1;
@@ -330,13 +330,13 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD (CON PAGINACIÓN)
+// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD (CORREGIDO)
 // ==========================================
 function openQtyModal(key) {
     const product = allProducts[key];
     if (!product) return;
 
-    selectedProductForQtyModal = product;
+    selectedProductKeyForQtyModal = key;
     document.getElementById('qty-modal-prod-name').innerText = product.name;
     document.getElementById('qty-modal-prod-price').innerText = '$' + parseFloat(product.price || 0).toFixed(2) + ' MXN';
     
@@ -350,7 +350,7 @@ function openQtyModal(key) {
 function closeQtyModal() {
     const backdrop = document.getElementById('qty-modal-backdrop');
     if (backdrop) backdrop.style.display = 'none';
-    selectedProductForQtyModal = null;
+    selectedProductKeyForQtyModal = null;
 }
 
 function changeQtyModalInput(delta) {
@@ -362,10 +362,13 @@ function changeQtyModalInput(delta) {
 }
 
 function confirmQtyModalAdd() {
-    if (!selectedProductForQtyModal) return;
+    if (!selectedProductKeyForQtyModal) return;
+
+    const product = allProducts[selectedProductKeyForQtyModal];
+    if (!product) return;
 
     const qty = parseInt(document.getElementById('qty-modal-input').value) || 1;
-    const key = selectedProductForQtyModal.key;
+    const key = selectedProductKeyForQtyModal;
 
     const existingIndex = cart.findIndex(item => item.key === key);
     if (existingIndex > -1) {
@@ -373,16 +376,17 @@ function confirmQtyModalAdd() {
     } else {
         cart.push({
             key: key,
-            code: selectedProductForQtyModal.code,
-            name: selectedProductForQtyModal.name,
-            cost: parseFloat(selectedProductForQtyModal.cost || 0),
-            price: parseFloat(selectedProductForQtyModal.price || 0),
+            code: product.code,
+            name: product.name,
+            cost: parseFloat(product.cost || 0),
+            price: parseFloat(product.price || 0),
             qty: qty
         });
     }
 
     renderCart();
     closeQtyModal();
+    renderPOSCatalog(document.getElementById('pos-search').value);
     showToast("🛒 Carrito actualizado");
 }
 
@@ -453,13 +457,13 @@ function changePOSPage(delta) {
 }
 
 function searchProduct(query) {
-    currentPOSPage = 1; // Reiniciar a página 1 al buscar
+    currentPOSPage = 1;
     renderPOSCatalog(query);
 }
 
 function filterCategory(cat) {
     currentPosCategoryFilter = cat;
-    currentPOSPage = 1; // Reiniciar a página 1 al cambiar de categoría
+    currentPOSPage = 1;
     
     document.querySelectorAll('#tab-pos .categories-bar .btn').forEach(btn => btn.classList.remove('active-cat'));
     const activeBtn = document.getElementById('btn-pos-cat-' + cat);
