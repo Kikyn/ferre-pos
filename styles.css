@@ -165,9 +165,18 @@ nav::-webkit-scrollbar {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 8px;
-    max-height: 380px;
-    overflow-y: auto;
+    min-height: 260px;
     padding: 2px;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
 }
 
 .prod-card-item {
@@ -180,6 +189,7 @@ nav::-webkit-scrollbar {
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.1s, border-color 0.1s;
+    height: 75px;
 }
 
 .prod-card-item:active {
@@ -193,6 +203,10 @@ nav::-webkit-scrollbar {
     color: #1e293b;
     margin-bottom: 4px;
     line-height: 1.1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .prod-card-price {
@@ -204,6 +218,7 @@ nav::-webkit-scrollbar {
 .prod-card-code {
     font-size: 0.68rem;
     color: #64748b;
+    display: none; /* Ahorra espacio vertical en celulares */
 }
 
 .search-row-mobile {
@@ -219,6 +234,9 @@ nav::-webkit-scrollbar {
     }
     .scan-btn {
         width: 100%;
+    }
+    .compact-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columnas fijas ideales para celular */
     }
 }
 
