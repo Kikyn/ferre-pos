@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link rel="stylesheet" href="styles.css?v=4.2">
+    <link rel="stylesheet" href="styles.css?v=4.3">
 </head>
 <body>
 
@@ -63,10 +63,7 @@
                             <button class="btn btn-secondary btn-sm" id="btn-pos-cat-plomeria" onclick="filterCategory('plomeria')">Plomería</button>
                         </div>
 
-                        <!-- Cuadrícula de productos compactos -->
                         <div id="pos-products-compact-list" class="compact-grid"></div>
-                        
-                        <!-- Controles de paginación responsivos -->
                         <div id="pos-pagination-controls" class="pagination-container"></div>
                     </div>
                 </div>
@@ -178,15 +175,15 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 3: HISTORIAL -->
+        <!-- PESTAÑA 3: HISTORIAL (APARTADO DE COTIZACIONES Y VENTAS) -->
         <div id="tab-history" class="tab-content" style="display:none;">
             <div class="card">
-                <div class="card-title">Historial de Documentos</div>
+                <div class="card-title">Historial de Cotizaciones y Ventas</div>
                 
                 <div class="filter-time-bar">
                     <button class="btn btn-secondary btn-sm" id="btn-time-today" onclick="setTimeFilter('today')">Hoy</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-time-week" onclick="setTimeFilter('week')">Esta Semana</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-time-month" onclick="setTimeFilter('month')">Este Mes</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-time-yesterday" onclick="setTimeFilter('yesterday')">Ayer</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-time-week" onclick="setTimeFilter('week')">Semana</button>
                     <button class="btn btn-secondary btn-sm active-time" id="btn-time-all" onclick="setTimeFilter('all')">Todos</button>
                 </div>
 
@@ -380,7 +377,7 @@
 
     <div id="toast-msg" class="toast-msg"></div>
 
-    <script src="script.js?v=4.2"></script>
+    <script src="script.js?v=4.3"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration Failed', err));
