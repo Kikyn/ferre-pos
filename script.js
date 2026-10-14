@@ -330,7 +330,7 @@ function deleteProduct(key) {
 }
 
 // ==========================================
-// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD (CORREGIDO)
+// 3. PUNTO DE VENTA Y MODAL DE CANTIDAD
 // ==========================================
 function openQtyModal(key) {
     const product = allProducts[key];
@@ -398,7 +398,6 @@ function renderPOSCatalog(filterQuery = '') {
     const sorted = getSortedProducts(allProducts);
     const q = filterQuery.toLowerCase().trim();
 
-    // Filtrar según categoría y búsqueda
     const filtered = sorted.filter(p => {
         if (currentPosCategoryFilter !== 'todos' && p.category !== currentPosCategoryFilter) return false;
 
@@ -410,7 +409,6 @@ function renderPOSCatalog(filterQuery = '') {
         return true;
     });
 
-    // Control de paginación
     const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
     if (currentPOSPage > totalPages) currentPOSPage = 1;
     const start = (currentPOSPage - 1) * itemsPerPage;
@@ -626,7 +624,7 @@ function renderCart() {
 }
 
 // ==========================================
-// 4. HISTORIAL Y REPORTES
+// 4. HISTORIAL Y FILTROS DE TIEMPO (HOY, AYER, SEMANA, TODOS)
 // ==========================================
 function generateNextFolio(type) {
     const prefix = type === 'venta' ? 'VEN-' : 'COT-';
@@ -708,14 +706,18 @@ function isSameDay(d1, d2) {
            d1.getDate() === d2.getDate();
 }
 
+function isYesterday(d1, d2) {
+    const yest = new Date(d1);
+    yest.setDate(yest.getDate() - 1);
+    return yest.getFullYear() === d2.getFullYear() &&
+           yest.getMonth() === d2.getMonth() &&
+           yest.getDate() === d2.getDate();
+}
+
 function isSameWeek(d1, d2) {
     const oneDay = 24 * 60 * 60 * 1000;
     const diffDays = Math.round(Math.abs((d1 - d2) / oneDay));
     return diffDays <= 7;
-}
-
-function isSameMonth(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth();
 }
 
 function setTimeFilter(filter) {
@@ -741,8 +743,8 @@ function renderHistory() {
         if (currentTimeFilter !== 'all') {
             if (!saleDate) return;
             if (currentTimeFilter === 'today' && !isSameDay(now, saleDate)) return;
+            if (currentTimeFilter === 'yesterday' && !isYesterday(now, saleDate)) return;
             if (currentTimeFilter === 'week' && !isSameWeek(now, saleDate)) return;
-            if (currentTimeFilter === 'month' && !isSameMonth(now, saleDate)) return;
         }
 
         const tr = document.createElement('tr');
@@ -784,7 +786,7 @@ function calculateReports() {
             if (!saleDate) return;
             if (currentReportTimeFilter === 'today' && !isSameDay(now, saleDate)) return;
             if (currentReportTimeFilter === 'week' && !isSameWeek(now, saleDate)) return;
-            if (currentReportTimeFilter === 'month' && !isSameMonth(now, saleDate)) return;
+            if (currentReportTimeFilter === 'month' && !isSameWeek(now, saleDate)) return;
         }
 
         if (s.status === 'Cobrado' || s.type === 'venta') {
